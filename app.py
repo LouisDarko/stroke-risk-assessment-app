@@ -5,15 +5,15 @@ import openai
 from top_nav import top_nav
 from translations import get_translation
 
+# Page configuration (must be the first Streamlit command)
+st.set_page_config(page_title="Stroke Risk Assessment App", layout="wide")
+
 # Hide default Streamlit UI elements
 st.markdown("""
     <style>
     #MainMenu, footer, header {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
-
-# Page configuration
-st.set_page_config(page_title="Stroke Risk Assessment App", layout="wide")
 
 # Top navigation bar
 top_nav()
