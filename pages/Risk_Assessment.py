@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 import joblib
-from translations import translate
+from translations import get_translation
+
 
 # Page title
 st.set_page_config(page_title="Stroke Risk Assessment", layout="wide")
