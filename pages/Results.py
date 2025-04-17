@@ -7,6 +7,12 @@ from gtts import gTTS
 import base64
 import os
 
+
+
+# Page title and layout
+st.set_page_config(page_title="Stroke Risk Results", layout="wide")
+st.title("📊 Stroke Risk Results")
+
 # Navigation Bar
 st.markdown("""
     <style>
@@ -38,10 +44,6 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-
-# Page title and layout
-st.set_page_config(page_title="Stroke Risk Results", layout="wide")
-st.title("📊 Stroke Risk Results")
 
 # Check if user data and prediction probability exist in session state
 if 'user_data' in st.session_state and 'prediction_prob' in st.session_state:
