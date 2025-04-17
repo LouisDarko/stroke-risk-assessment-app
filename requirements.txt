@@ -1,6 +1,9 @@
 streamlit
-openai
-matplotlib
 pandas
-plotly
-streamlit-option-menu
+scikit-learn
+matplotlib
+seaborn
+joblib
+gTTS
+openai
+
