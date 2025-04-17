@@ -4,7 +4,7 @@ import base64
 import os
 
 # Page configuration
-st.set_page_config(page_title="Stroke Info | AlzEye", layout="wide")
+st.set_page_config(page_title="Stroke Risk Prediction", layout="wide")
 
 # Hide Streamlit default elements
 st.markdown("""
@@ -40,6 +40,7 @@ st.markdown("""
         <a href='/Home' target='_self'>🏠 Home</a>
         <a href='/Risk_Assessment' target='_self'>📝 Risk Assessment</a>
         <a href='/Results' target='_self'>📊 Results</a>
+        <a href='/Recommendations' target='_self'>🤝🏾 Recommendations</a>
     </div>
 """, unsafe_allow_html=True)
 
