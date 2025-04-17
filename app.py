@@ -3,6 +3,11 @@ from gtts import gTTS
 import base64
 import os
 
+from navbar import show_navbar
+
+# Display the Navbar
+show_navbar()
+
 # Page configuration
 st.set_page_config(page_title="Stroke Risk Prediction", layout="wide")
 
