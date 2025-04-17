@@ -32,7 +32,7 @@ st.markdown("""
     </style>
 
     <div class='nav-menu'>
-        <a href='/Home' target='_self'>🏠 Home</a>
+        <a href='/' target='_self'>🏠 Home</a>
         <a href='/Risk_Assessment' target='_self'>📝 Risk Assessment</a>
         <a href='/Results' target='_self'>📊 Results</a>
         <a href='/Recommendations' target='_self'>🤝🏾 Recommendations</a>
