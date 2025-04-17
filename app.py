@@ -1,20 +1,61 @@
 import streamlit as st
+from streamlit_option_menu import option_menu
 from pages import home, assessment, results, recommendations, chatbot
 
-# Set page config
-st.set_page_config(page_title="Stroke Risk Assessment", layout="wide")
+st.set_page_config(page_title="Stroke Risk App", layout="wide")
 
-# Sidebar menu
-menu = st.sidebar.selectbox("Menu", ["Home", "Risk Assessment", "Understanding Your Results", "Recommendations", "Chatbot Support"])
+# Custom CSS
+st.markdown("""
+<style>
+body {
+    background-color: #f9f9fb;
+}
+header {
+    visibility: hidden;
+}
+.main {
+    padding-top: 10px;
+}
+.chat-button {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background-color: #4CAF50;
+    color: white;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    text-align: center;
+    line-height: 60px;
+    font-size: 30px;
+    cursor: pointer;
+    z-index: 1000;
+}
+</style>
+""", unsafe_allow_html=True)
 
-# Routing
-if menu == "Home":
-    home.app()
-elif menu == "Risk Assessment":
-    assessment.app()
-elif menu == "Understanding Your Results":
-    results.app()
-elif menu == "Recommendations":
-    recommendations.app()
-elif menu == "Chatbot Support":
-    chatbot.app()
+# Language selection
+lang = st.selectbox("🌐 Select Language", ["English", "Français"])
+
+# Horizontal menu
+selected = option_menu(
+    menu_title=None,
+    options=["Home", "Assessment", "Results", "Recommendations"],
+    icons=["house", "clipboard-check", "bar-chart", "lightbulb"],
+    orientation="horizontal"
+)
+
+# Page navigation
+if selected == "Home":
+    home.app(lang)
+elif selected == "Assessment":
+    assessment.app(lang)
+elif selected == "Results":
+    results.app(lang)
+elif selected == "Recommendations":
+    recommendations.app(lang)
+
+# Floating Chatbot on Home page only
+if selected == "Home":
+    st.markdown('<a href="#chatbot"><div class="chat-button">💬</div></a>', unsafe_allow_html=True)
+    chatbot.app(lang)

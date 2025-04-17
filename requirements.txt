@@ -3,3 +3,4 @@ openai
 matplotlib
 pandas
 plotly
+streamlit-option-menu
