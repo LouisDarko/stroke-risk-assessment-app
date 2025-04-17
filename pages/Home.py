@@ -127,9 +127,9 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# Language selector
-language = st.selectbox("🌍 Language", ["English 🇬🇧", "French 🇫🇷", "Spanish 🇪🇸", "Japanese 🇯🇵", "Chinese 🇨🇳", "Akan 🇬🇭", "Ga 🇬🇭", "Hausa 🇬🇭", "Ewe 🇬🇭"])
-lang_key = language.split()[0]  # Extract language key
+# Get the language from query params
+query_params = st.query_params
+language = query_params.get("language", ["English"])[0]  # Default to English if no language is provided
 
 # Translations dictionary
 translations = {
@@ -160,13 +160,8 @@ translations = {
     # More translations as necessary...
 }
 
-lang_codes = {
-    "English": "en", "French": "fr", "Spanish": "es", "Japanese": "ja",
-    "Chinese": "zh-CN", "Akan": "en", "Ga": "en", "Hausa": "en", "Ewe": "en"
-}
-
-# Fetch text for selected language
-text = translations.get(lang_key, translations["English"])
+# Get content for the selected language
+text = translations.get(language, translations["English"])
 
 # Page config
 st.set_page_config(page_title="Stroke Info | AlzEye", layout="wide")
@@ -182,14 +177,14 @@ def create_audio(text, lang_code):
             st.audio(f"data:audio/mp3;base64,{b64}", format="audio/mp3")
         os.remove(file_path)
     except Exception:
-        st.warning("❌ Text-to-speech not available for this language.")
+        st.warning("❌ Audio not available for this language.")
 
 # Header and Description
 st.markdown(f"""
     <div class="section-container">
         <h2 class="section-header">{text["title"]}</h2>
         <p class="section-content">{text["desc"]}</p>
-        <button class="tts-btn" onclick="create_audio('{text["desc"]}', '{lang_codes[lang_key]}')">🔊 Listen</button>
+        <button class="tts-btn" onclick="create_audio('{text["desc"]}', 'en')">🔊 Listen</button>
     </div>
 """, unsafe_allow_html=True)
 
@@ -203,7 +198,7 @@ def info_section(header, content):
             </div>
         </div>
     """, unsafe_allow_html=True)
-    create_audio(content, lang_codes[lang_key])
+    create_audio(content, "en")
 
 # Stroke information sections
 info_section(text["types"], """
@@ -278,3 +273,4 @@ st.markdown(f"""
         </a>
     </div>
 """, unsafe_allow_html=True)
+
