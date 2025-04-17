@@ -1,5 +1,12 @@
 import streamlit as st
 
+
+
+
+# Page configuration
+st.set_page_config(page_title="Stroke Risk Recommendations", layout="wide")
+st.title("💡 Stroke Prevention Recommendations")
+
 # Navigation Bar
 st.markdown("""
     <style>
@@ -30,11 +37,6 @@ st.markdown("""
         <a href='/Recommendations' target='_self'>🤝🏾 Recommendations</a>
     </div>
 """, unsafe_allow_html=True)
-
-
-# Page configuration
-st.set_page_config(page_title="Stroke Risk Recommendations", layout="wide")
-st.title("💡 Stroke Prevention Recommendations")
 
 # Retrieve risk score and inputs from session state
 risk_score = st.session_state.get("risk_score")
