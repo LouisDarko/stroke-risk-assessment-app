@@ -45,20 +45,20 @@ if 'user_data' in st.session_state and 'prediction_prob' in st.session_state:
     st.pyplot(fig)
 
     # Generate audio description (optional)
-    def create_audio(text, lang="en"):
-        try:
-            tts = gTTS(text, lang=lang)
-            file_path = "tts_output.mp3"
-            tts.save(file_path)
-            with open(file_path, "rb") as f:
-                data = f.read()
-                b64 = base64.b64encode(data).decode()
-                st.audio(f"data:audio/mp3;base64,{b64}", format="audio/mp3")
-            os.remove(file_path)
-        except Exception as e:
-            st.warning("Audio playback is unavailable.")
+    # def create_audio(text, lang="en"):
+    #     try:
+    #         tts = gTTS(text, lang=lang)
+    #         file_path = "tts_output.mp3"
+    #         tts.save(file_path)
+    #         with open(file_path, "rb") as f:
+    #             data = f.read()
+    #             b64 = base64.b64encode(data).decode()
+    #             st.audio(f"data:audio/mp3;base64,{b64}", format="audio/mp3")
+    #         os.remove(file_path)
+    #     except Exception as e:
+    #         st.warning("Audio playback is unavailable.")
 
-    create_audio(f"Your stroke risk probability is {prediction_prob * 100:.1f} percent.")
+    # create_audio(f"Your stroke risk probability is {prediction_prob * 100:.1f} percent.")
 
     # Recommendations button
     st.markdown("### 📘 Click below to get personalized recommendations based on your results:")
@@ -113,3 +113,12 @@ else:
 #                 unsafe_allow_html=True)
 
 st.markdown("</div></details></div>", unsafe_allow_html=True)
+
+col1, col2 = st.columns([1, 1])
+with col1:
+    st.page_link("pages/Risk_Assessment.py", label="Go back to Risk Assessment", icon="🔙")
+with col2:
+    st.page_link("app.py", label="Home", icon="🏠")
+
+# Reset the flag so the user cannot directly access the Results page without calculating the risk
+st.session_state.risk_calculated = False
