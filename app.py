@@ -15,37 +15,46 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Properly working Navigation Bar using Streamlit links
-st.markdown("##")  # Just a little spacing
+# Stylish navigation bar using st.page_link for functional routing
+st.markdown("""
+    <style>
+        .nav-container {
+            background-color: #4C9D70;
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            font-size: 18px;
+            margin-bottom: 40px;
+        }
+        .nav-container .stButton > button {
+            background: none;
+            color: white;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+        .nav-container .stButton > button:hover {
+            text-decoration: underline;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
+# Render the nav links
 with st.container():
-    st.markdown("""
-        <style>
-            .custom-nav .stButton>button {
-                background-color: #4C9D70;
-                color: white;
-                font-weight: bold;
-                border-radius: 10px;
-                padding: 10px 20px;
-                margin: 5px;
-                border: none;
-            }
-            .custom-nav .stButton>button:hover {
-                background-color: #3d825c;
-            }
-        </style>
-    """, unsafe_allow_html=True)
-
-    with st.container():
-        nav1, nav2, nav3, nav4 = st.columns(4)
-        with nav1:
-            st.page_link("app.py", label="🏠 Home")
-        with nav2:
-            st.page_link("pages/Risk_Assessment.py", label="📝 Risk Assessment")
-        with nav3:
-            st.page_link("pages/Results.py", label="📊 Results")
-        with nav4:
-            st.page_link("pages/Recommendations.py", label="🤝🏾 Recommendations")
+    nav1, nav2, nav3, nav4 = st.columns(4)
+    with nav1:
+        st.page_link("app.py", label="🏠 Home")
+    with nav2:
+        st.page_link("pages/Risk_Assessment.py", label="📝 Risk Assessment")
+    with nav3:
+        st.page_link("pages/Results.py", label="📊 Results")
+    with nav4:
+        st.page_link("pages/Recommendations.py", label="🤝🏾 Recommendations")
 
 
 # Header and introduction
