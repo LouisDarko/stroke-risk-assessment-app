@@ -11,7 +11,9 @@ st.title("📝 Stroke Risk Assessment")  # Static title without translation
 # Load the trained model
 @st.cache_resource
 def load_model():
-    return joblib.load("pages/best_gb_model.pkl")
+    import os
+    model_path = os.path.join(os.path.dirname(__file__), "best_gb_model.pkl")
+    return joblib.load(model_path)
 
 model = load_model()
 
