@@ -2,7 +2,6 @@ import streamlit as st
 from gtts import gTTS
 import base64
 import os
-import openai
 
 # Hide sidebar, hamburger menu, and Streamlit branding
 st.markdown("""
@@ -11,60 +10,128 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Top navigation bar
+# Custom CSS for improving the UI
 st.markdown("""
     <style>
+    /* General page styles */
+    body {
+        font-family: 'Arial', sans-serif;
+        background-color: #fafafa;
+        color: #333;
+    }
+
+    /* Top Navigation Bar */
     .nav-menu {
         background-color: #4C9D70;
-        padding: 15px;
-        border-radius: 10px;
+        padding: 12px 30px;
+        border-radius: 15px;
         display: flex;
         justify-content: center;
         gap: 40px;
         font-size: 18px;
-        margin-bottom: 30px;
+        font-weight: bold;
     }
     .nav-menu a {
         color: white;
         text-decoration: none;
-        font-weight: bold;
+        font-size: 18px;
     }
     .nav-menu a:hover {
         text-decoration: underline;
     }
-    </style>
 
-    <div class='nav-menu'>
-        <a href='/Home' target='_self'>🏠 Home</a>
-        <a href='/Risk_Assessment' target='_self'>📝 Risk Assessment</a>
-        <a href='/Results' target='_self'>📊 Results</a>
+    /* Section containers */
+    .section-container {
+        background-color: #ffffff;
+        padding: 30px;
+        margin-bottom: 40px;
+        border-radius: 10px;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .section-header {
+        color: #4C9D70;
+        font-size: 28px;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+
+    .section-content {
+        font-size: 18px;
+        line-height: 1.6;
+    }
+
+    /* Text-to-Speech Button Styling */
+    .tts-btn {
+        background-color: #4C9D70;
+        color: white;
+        padding: 12px 24px;
+        font-size: 16px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: block;
+        margin: 20px auto;
+    }
+
+    .tts-btn:hover {
+        background-color: #3e8e41;
+        transform: scale(1.05);
+    }
+
+    /* Call to Action Section */
+    .cta-section {
+        background-color: #e6f2ff;
+        padding: 40px;
+        border-radius: 12px;
+        text-align: center;
+        margin-top: 30px;
+    }
+
+    .cta-section h4 {
+        font-size: 26px;
+        color: #333;
+    }
+
+    .cta-section p {
+        font-size: 18px;
+        color: #555;
+        margin-bottom: 30px;
+    }
+
+    .cta-section button {
+        background-color: #4C9D70;
+        color: white;
+        padding: 12px 24px;
+        font-size: 18px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .cta-section button:hover {
+        background-color: #3e8e41;
+        transform: scale(1.1);
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Top navigation bar
+st.markdown("""
+    <div class="nav-menu">
+        <a href="?page=home" target="_self">🏠 Home</a>
+        <a href="?page=risk_assessment" target="_self">📝 Risk Assessment</a>
+        <a href="?page=results" target="_self">📊 Results</a>
     </div>
 """, unsafe_allow_html=True)
 
-# Set OpenAI API Key
-openai.api_key = st.secrets["OPENAI_API_KEY"]  # Secure storage
-
-# Page config
-st.set_page_config(page_title="Stroke Info | AlzEye", layout="wide")
-
-# Text-to-speech function
-def create_audio(text, lang_code):
-    try:
-        tts = gTTS(text, lang=lang_code)
-        file_path = f"tts_{lang_code}.mp3"
-        tts.save(file_path)
-        with open(file_path, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode()
-            st.audio(f"data:audio/mp3;base64,{b64}", format="audio/mp3")
-        os.remove(file_path)
-    except Exception:
-        st.warning("❌ Text-to-speech not available for this language.")
-
 # Language selector
 language = st.selectbox("🌍 Language", ["English 🇬🇧", "French 🇫🇷", "Spanish 🇪🇸", "Japanese 🇯🇵", "Chinese 🇨🇳", "Akan 🇬🇭", "Ga 🇬🇭", "Hausa 🇬🇭", "Ewe 🇬🇭"])
-lang_key = language.split()[0]
+lang_key = language.split()[0]  # Extract language key
 
-# Translations
+# Translations dictionary
 translations = {
     "English": {
         "title": "🧠 Learn About Stroke",
@@ -90,7 +157,7 @@ translations = {
         "stats": "Statistiques sur les AVC",
         "risk_assessment": "Évaluez votre risque d'AVC"
     },
-    # Add more as needed
+    # More translations as necessary...
 }
 
 lang_codes = {
@@ -98,21 +165,45 @@ lang_codes = {
     "Chinese": "zh-CN", "Akan": "en", "Ga": "en", "Hausa": "en", "Ewe": "en"
 }
 
+# Fetch text for selected language
 text = translations.get(lang_key, translations["English"])
 
-# Header
-st.title(text["title"])
-st.write(text["desc"])
-create_audio(text["desc"], lang_codes[lang_key])
+# Page config
+st.set_page_config(page_title="Stroke Info | AlzEye", layout="wide")
 
-# Info section builder
+# Text-to-speech function
+def create_audio(text, lang_code):
+    try:
+        tts = gTTS(text, lang=lang_code)
+        file_path = f"tts_{lang_code}.mp3"
+        tts.save(file_path)
+        with open(file_path, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode()
+            st.audio(f"data:audio/mp3;base64,{b64}", format="audio/mp3")
+        os.remove(file_path)
+    except Exception:
+        st.warning("❌ Text-to-speech not available for this language.")
+
+# Header and Description
+st.markdown(f"""
+    <div class="section-container">
+        <h2 class="section-header">{text["title"]}</h2>
+        <p class="section-content">{text["desc"]}</p>
+        <button class="tts-btn" onclick="create_audio('{text["desc"]}', '{lang_codes[lang_key]}')">🔊 Listen</button>
+    </div>
+""", unsafe_allow_html=True)
+
+# Stroke Information Section
 def info_section(header, content):
     st.markdown(f"""
-        <div style='background-color:#f0f8ff; padding:20px; border-radius:10px; margin-bottom:20px;'>
-            <h4>{header}</h4>
-            {content}
+        <div class="section-container">
+            <h3 class="section-header">{header}</h3>
+            <div class="section-content">
+                {content}
+            </div>
         </div>
     """, unsafe_allow_html=True)
+    create_audio(content, lang_codes[lang_key])
 
 # Stroke information sections
 info_section(text["types"], """
@@ -177,66 +268,13 @@ info_section(text["stats"], """
 </ul>
 """)
 
-# Final call to action: Responsive button with hover animation
+# Final Call to Action Section
 st.markdown(f"""
-    <div style='background-color:#e6f2ff; padding:20px; border-radius:10px; text-align:center; margin-top:30px;'>
+    <div class="cta-section">
         <h4>{text["risk_assessment"]}</h4>
         <p>Click the button below to assess your personal stroke risk using our intelligent tool.</p>
-        <a href='/Risk_Assessment' target='_self'>
-            <button style='background-color:#4C9D70; color:white; padding:10px 20px; font-size:16px; border:none; border-radius:8px; cursor:pointer; transition:all 0.3s ease;'>
-                📝 Go to Risk Assessment
-            </button>
+        <a href="?page=risk_assessment" target="_self">
+            <button>📝 Go to Risk Assessment</button>
         </a>
     </div>
-    <style>
-    button:hover {{
-        background-color: #3e8e41;
-        transform: scale(1.1);
-    }}
-    </style>
 """, unsafe_allow_html=True)
-
-import openai  # If not already imported
-
-# --- Chatbot widget (floating button) ---
-st.markdown("""
-<style>
-#floating-chat {
-  position: fixed;
-  bottom: 25px;
-  right: 30px;
-  z-index: 9999;
-}
-.chat-popup {
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  width: 320px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-</style>
-<div id="floating-chat">
-  <details>
-    <summary style="cursor:pointer;
-                    font-size:16px;
-                    background:#4C9D70;
-                    color:white;
-                    padding:10px 20px;
-                    border-radius:20px;">
-      💬 Chat
-    </summary>
-    <div class="chat-popup">
-""", unsafe_allow_html=True)
-
-chat_input = st.text_input("💡 Ask about stroke:", key="global_chat")
-if chat_input:
-    resp = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=chat_input,
-        max_tokens=100
-    )
-    reply = resp.choices[0].text.strip()
-    st.markdown(f"<div style='margin-top:10px;'><strong>🤖:</strong> {reply}</div>",
-                unsafe_allow_html=True)
-
-st.markdown("</div></details></div>", unsafe_allow_html=True)
