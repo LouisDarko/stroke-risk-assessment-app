@@ -15,9 +15,11 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-import streamlit as st
+ Page title and layout
+st.set_page_config(page_title="Stroke Risk Results", layout="wide")
+st.title("📊 Stroke Risk Results")
 
-# Apply your custom CSS styling
+# Navigation Bar
 st.markdown("""
     <style>
         .nav-menu {
@@ -30,43 +32,23 @@ st.markdown("""
             font-size: 18px;
             margin-bottom: 40px;
         }
-        .nav-menu .stButton > button {
-            background: none;
+        .nav-menu a {
             color: white;
+            text-decoration: none;
             font-weight: bold;
-            border: none;
-            cursor: pointer;
-            padding: 0;
         }
-        .nav-menu .stButton > button:hover {
+        .nav-menu a:hover {
             text-decoration: underline;
         }
     </style>
-""", unsafe_allow_html=True)
 
-# Render the buttons as page links inside the styled container
-with st.container():
-    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-    with col1:
-        with st.container():
-            st.markdown("<div class='nav-menu'>", unsafe_allow_html=True)
-            st.page_link("app.py", label="🏠 Home")
-            st.markdown("</div>", unsafe_allow_html=True)
-    with col2:
-        with st.container():
-            st.markdown("<div class='nav-menu'>", unsafe_allow_html=True)
-            st.page_link("pages/Risk_Assessment.py", label="📝 Risk Assessment")
-            st.markdown("</div>", unsafe_allow_html=True)
-    with col3:
-        with st.container():
-            st.markdown("<div class='nav-menu'>", unsafe_allow_html=True)
-            st.page_link("pages/Results.py", label="📊 Results")
-            st.markdown("</div>", unsafe_allow_html=True)
-    with col4:
-        with st.container():
-            st.markdown("<div class='nav-menu'>", unsafe_allow_html=True)
-            st.page_link("pages/Recommendations.py", label="🤝🏾 Recommendations")
-            st.markdown("</div>", unsafe_allow_html=True)
+    <div class='nav-menu'>
+        <a href='/' target='_self'>🏠 Home</a>
+        <a href='/Risk_Assessment' target='_self'>📝 Risk Assessment</a>
+        <a href='/Results' target='_self'>📊 Results</a>
+        <a href='/Recommendations' target='_self'>🤝🏾 Recommendations</a>
+    </div>
+""", unsafe_allow_html=True)
 
 
 # Header and introduction
