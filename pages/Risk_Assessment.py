@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import joblib
-from translations import get_translation
+
 
 
 # Page title
