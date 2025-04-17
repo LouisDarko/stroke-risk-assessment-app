@@ -1,9 +1,11 @@
 streamlit
 pandas
-scikit-learn
 matplotlib
 seaborn
 joblib
 gTTS
 openai
+scikit-learn==1.4.1
+
+
 
