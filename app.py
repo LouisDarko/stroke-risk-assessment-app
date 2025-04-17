@@ -15,10 +15,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Stylish navigation bar using st.page_link for functional routing
+import streamlit as st
+
+# Apply your custom CSS styling
 st.markdown("""
     <style>
-        .nav-container {
+        .nav-menu {
             background-color: #4C9D70;
             padding: 15px;
             border-radius: 12px;
@@ -28,33 +30,43 @@ st.markdown("""
             font-size: 18px;
             margin-bottom: 40px;
         }
-        .nav-container .stButton > button {
+        .nav-menu .stButton > button {
             background: none;
             color: white;
             font-weight: bold;
             border: none;
             cursor: pointer;
-            padding: 5px 10px;
+            padding: 0;
         }
-        .nav-container .stButton > button:hover {
+        .nav-menu .stButton > button:hover {
             text-decoration: underline;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 5px;
         }
     </style>
 """, unsafe_allow_html=True)
 
-# Render the nav links
+# Render the buttons as page links inside the styled container
 with st.container():
-    nav1, nav2, nav3, nav4 = st.columns(4)
-    with nav1:
-        st.page_link("app.py", label="🏠 Home")
-    with nav2:
-        st.page_link("pages/Risk_Assessment.py", label="📝 Risk Assessment")
-    with nav3:
-        st.page_link("pages/Results.py", label="📊 Results")
-    with nav4:
-        st.page_link("pages/Recommendations.py", label="🤝🏾 Recommendations")
+    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+    with col1:
+        with st.container():
+            st.markdown("<div class='nav-menu'>", unsafe_allow_html=True)
+            st.page_link("app.py", label="🏠 Home")
+            st.markdown("</div>", unsafe_allow_html=True)
+    with col2:
+        with st.container():
+            st.markdown("<div class='nav-menu'>", unsafe_allow_html=True)
+            st.page_link("pages/Risk_Assessment.py", label="📝 Risk Assessment")
+            st.markdown("</div>", unsafe_allow_html=True)
+    with col3:
+        with st.container():
+            st.markdown("<div class='nav-menu'>", unsafe_allow_html=True)
+            st.page_link("pages/Results.py", label="📊 Results")
+            st.markdown("</div>", unsafe_allow_html=True)
+    with col4:
+        with st.container():
+            st.markdown("<div class='nav-menu'>", unsafe_allow_html=True)
+            st.page_link("pages/Recommendations.py", label="🤝🏾 Recommendations")
+            st.markdown("</div>", unsafe_allow_html=True)
 
 
 # Header and introduction
