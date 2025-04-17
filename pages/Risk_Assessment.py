@@ -6,7 +6,7 @@ from translations import get_translation
 
 # Page title
 st.set_page_config(page_title="Stroke Risk Assessment", layout="wide")
-st.title("📝 " + translate("assessment", st.session_state.language))
+st.title("📝 Stroke Risk Assessment")  # Static title without translation
 
 # Load the trained model
 @st.cache_resource
