@@ -3,30 +3,14 @@ import streamlit as st
 def top_nav():
     st.markdown("""
     <style>
-    .nav-menu {
-        background-color: #4C9D70;
-        padding: 15px;
-        border-radius: 10px;
-        display: flex;
-        justify-content: center;
-        gap: 40px;
-        font-size: 18px;
-        margin-bottom: 30px;
-    }
-    .nav-menu a {
-        color: white;
-        text-decoration: none;
-        font-weight: bold;
-    }
-    .nav-menu a:hover {
-        text-decoration: underline;
-    }
+        .navbar { background-color: #4CAF50; padding: 10px; font-size: 18px; font-weight: bold; text-align: center; }
+        .navbar a { color: white; text-decoration: none; padding: 14px 20px; display: inline-block; }
+        .navbar a:hover { background-color: #3e8e41; }
     </style>
-
-    <div class='nav-menu'>
-        <a href='Home' target='_self'>🏠 Home</a>
-        <a href='Risk_Assessment' target='_self'>📝 Risk Assessment</a>
-        <a href='Results' target='_self'>📊 Results</a>
-        <a href='Recommendations' target='_self'>💡 Recommendations</a>
+    <div class="navbar">
+        <a href="Home">Home</a>
+        <a href="Risk_Assessment">Risk Assessment</a>
+        <a href="Results">Results</a>
+        <a href="Recommendations">Recommendations</a>
     </div>
     """, unsafe_allow_html=True)

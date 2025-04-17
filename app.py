@@ -8,7 +8,7 @@ from translations import get_translation
 # Page configuration (must be the first Streamlit command)
 st.set_page_config(page_title="Stroke Risk Assessment App", layout="wide")
 
-# Hide default Streamlit UI elements
+# Hide default Streamlit UI elements (Sidebar removed by layout='wide')
 st.markdown("""
     <style>
     #MainMenu, footer, header {visibility: hidden;}
