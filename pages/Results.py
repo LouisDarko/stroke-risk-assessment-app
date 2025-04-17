@@ -151,8 +151,7 @@ st.markdown("</div></details></div>", unsafe_allow_html=True)
 col1, col2 = st.columns([1, 1])
 with col1:
     st.page_link("pages/Risk_Assessment.py", label="Go back to Risk Assessment", icon="🔙")
-with col2:
-    st.page_link("app.py", label="Home", icon="🏠")
+
 
 # Reset the flag so the user cannot directly access the Results page without calculating the risk
 st.session_state.risk_calculated = False
