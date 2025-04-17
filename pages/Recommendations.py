@@ -7,41 +7,7 @@ import os
 st.set_page_config(page_title="Stroke Risk Recommendations", layout="wide")
 st.title("💡 Stroke Prevention Recommendations")
 
-# Language selection
-language = st.selectbox("🌍 Language", ["English 🇬🇧", "French 🇫🇷", "Spanish 🇪🇸", "Japanese 🇯🇵", "Chinese 🇨🇳", "Akan 🇬🇭", "Ga 🇬🇭", "Hausa 🇬🇭", "Ewe 🇬🇭"])
-lang_key = language.split()[0]
 
-translations = {
-    "English": {
-        "header": "Stroke Prevention Recommendations",
-        "based_on_score": "Based on your input data, your stroke risk score is",
-        "suggestions": "Personalized Suggestions",
-        "low": "Your stroke risk is relatively low.",
-        "moderate": "You have a moderate risk of stroke.",
-        "high": "You are at a high risk of stroke.",
-        "general": "General Stroke Prevention Tips",
-        "button_assess": "🧮 Start New Assessment",
-        "button_home": "🏠 Return to Home",
-        "no_score": "No risk score found. Please complete the Risk Assessment and view Results first.",
-        "goto_results": "📊 Go to Results"
-    },
-    "French": {
-        "header": "Recommandations pour la prévention des AVC",
-        "based_on_score": "Selon vos données saisies, votre score de risque d'AVC est",
-        "suggestions": "Suggestions personnalisées",
-        "low": "Votre risque d'AVC est relativement faible.",
-        "moderate": "Vous avez un risque modéré d'AVC.",
-        "high": "Vous êtes à haut risque d'AVC.",
-        "general": "Conseils généraux pour la prévention des AVC",
-        "button_assess": "🧮 Nouvelle évaluation",
-        "button_home": "🏠 Retour à l'accueil",
-        "no_score": "Aucun score de risque trouvé. Veuillez d'abord compléter l'évaluation du risque et voir les résultats.",
-        "goto_results": "📊 Aller aux résultats"
-    }
-    # Additional translations can be added here
-}
-
-text = translations.get(lang_key, translations["English"])
 
 # Retrieve risk score and inputs from session state
 risk_score = st.session_state.get("risk_score")
@@ -143,47 +109,47 @@ with col2:
     st.page_link("Home.py", label=text["button_home"], icon="🏠")
 
 
-import openai  # If not already imported
+# import openai  # If not already imported
 
-# --- Chatbot widget (floating button) ---
-st.markdown("""
-<style>
-#floating-chat {
-  position: fixed;
-  bottom: 25px;
-  right: 30px;
-  z-index: 9999;
-}
-.chat-popup {
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  width: 320px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-</style>
-<div id="floating-chat">
-  <details>
-    <summary style="cursor:pointer;
-                    font-size:16px;
-                    background:#4C9D70;
-                    color:white;
-                    padding:10px 20px;
-                    border-radius:20px;">
-      💬 Chat
-    </summary>
-    <div class="chat-popup">
-""", unsafe_allow_html=True)
+# # --- Chatbot widget (floating button) ---
+# st.markdown("""
+# <style>
+# #floating-chat {
+#   position: fixed;
+#   bottom: 25px;
+#   right: 30px;
+#   z-index: 9999;
+# }
+# .chat-popup {
+#   background: white;
+#   padding: 20px;
+#   border-radius: 10px;
+#   width: 320px;
+#   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+# }
+# </style>
+# <div id="floating-chat">
+#   <details>
+#     <summary style="cursor:pointer;
+#                     font-size:16px;
+#                     background:#4C9D70;
+#                     color:white;
+#                     padding:10px 20px;
+#                     border-radius:20px;">
+#       💬 Chat
+#     </summary>
+#     <div class="chat-popup">
+# """, unsafe_allow_html=True)
 
-chat_input = st.text_input("💡 Ask about stroke:", key="global_chat")
-if chat_input:
-    resp = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=chat_input,
-        max_tokens=100
-    )
-    reply = resp.choices[0].text.strip()
-    st.markdown(f"<div style='margin-top:10px;'><strong>🤖:</strong> {reply}</div>",
-                unsafe_allow_html=True)
+# chat_input = st.text_input("💡 Ask about stroke:", key="global_chat")
+# if chat_input:
+#     resp = openai.Completion.create(
+#         engine="text-davinci-003",
+#         prompt=chat_input,
+#         max_tokens=100
+#     )
+#     reply = resp.choices[0].text.strip()
+#     st.markdown(f"<div style='margin-top:10px;'><strong>🤖:</strong> {reply}</div>",
+#                 unsafe_allow_html=True)
 
 st.markdown("</div></details></div>", unsafe_allow_html=True)
