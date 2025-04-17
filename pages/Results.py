@@ -63,7 +63,7 @@ if 'user_data' in st.session_state and 'prediction_prob' in st.session_state:
     # Recommendations button
     st.markdown("### 📘 Click below to get personalized recommendations based on your results:")
     if st.button("Click for Recommendations"):
-        st.switch_page("pages/3_🧾_Recommendations.py")
+        st.switch_page("pages/Recommendations.py")
 
 else:
     st.warning("No user data found. Please complete the risk assessment first.")
