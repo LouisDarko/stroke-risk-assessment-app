@@ -15,7 +15,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
- Page title and layout
+Page title and layout
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
 st.title("📊 Stroke Risk Results")
 
