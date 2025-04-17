@@ -2,6 +2,12 @@ import streamlit as st
 import pandas as pd
 import joblib
 
+
+
+# Page title
+st.set_page_config(page_title="Stroke Risk Assessment", layout="wide")
+st.title("📝 Stroke Risk Assessment")  # Static title without translation
+
 # Navigation Bar
 st.markdown("""
     <style>
@@ -34,10 +40,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-
-# Page title
-st.set_page_config(page_title="Stroke Risk Assessment", layout="wide")
-st.title("📝 Stroke Risk Assessment")  # Static title without translation
 
 # Load the trained model
 @st.cache_resource
