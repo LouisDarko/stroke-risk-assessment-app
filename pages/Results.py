@@ -69,47 +69,47 @@ else:
     st.warning("No user data found. Please complete the risk assessment first.")
 
 
-import openai  # If not already imported
+# import openai  # If not already imported
 
-# --- Chatbot widget (floating button) ---
-st.markdown("""
-<style>
-#floating-chat {
-  position: fixed;
-  bottom: 25px;
-  right: 30px;
-  z-index: 9999;
-}
-.chat-popup {
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  width: 320px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-</style>
-<div id="floating-chat">
-  <details>
-    <summary style="cursor:pointer;
-                    font-size:16px;
-                    background:#4C9D70;
-                    color:white;
-                    padding:10px 20px;
-                    border-radius:20px;">
-      💬 Chat
-    </summary>
-    <div class="chat-popup">
-""", unsafe_allow_html=True)
+# # --- Chatbot widget (floating button) ---
+# st.markdown("""
+# <style>
+# #floating-chat {
+#   position: fixed;
+#   bottom: 25px;
+#   right: 30px;
+#   z-index: 9999;
+# }
+# .chat-popup {
+#   background: white;
+#   padding: 20px;
+#   border-radius: 10px;
+#   width: 320px;
+#   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+# }
+# </style>
+# <div id="floating-chat">
+#   <details>
+#     <summary style="cursor:pointer;
+#                     font-size:16px;
+#                     background:#4C9D70;
+#                     color:white;
+#                     padding:10px 20px;
+#                     border-radius:20px;">
+#       💬 Chat
+#     </summary>
+#     <div class="chat-popup">
+# """, unsafe_allow_html=True)
 
-chat_input = st.text_input("💡 Ask about stroke:", key="global_chat")
-if chat_input:
-    resp = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=chat_input,
-        max_tokens=100
-    )
-    reply = resp.choices[0].text.strip()
-    st.markdown(f"<div style='margin-top:10px;'><strong>🤖:</strong> {reply}</div>",
-                unsafe_allow_html=True)
+# chat_input = st.text_input("💡 Ask about stroke:", key="global_chat")
+# if chat_input:
+#     resp = openai.Completion.create(
+#         engine="text-davinci-003",
+#         prompt=chat_input,
+#         max_tokens=100
+#     )
+#     reply = resp.choices[0].text.strip()
+#     st.markdown(f"<div style='margin-top:10px;'><strong>🤖:</strong> {reply}</div>",
+#                 unsafe_allow_html=True)
 
 st.markdown("</div></details></div>", unsafe_allow_html=True)
