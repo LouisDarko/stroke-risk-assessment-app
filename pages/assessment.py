@@ -1,23 +1,23 @@
 import streamlit as st
+import pandas as pd
 
-def app(lang):
-    st.header("📝 " + ("Stroke Risk Assessment" if lang == "English" else "Évaluation du Risque d'AVC"))
-    with st.form("form"):
-        st.subheader("📋 " + ("Personal Info" if lang == "English" else "Infos Personnelles"))
-        age = st.slider("Age", 1, 100)
-        gender = st.selectbox("Gender", ["Male", "Female", "Other"])
-        married = st.radio("Ever Married?", ["Yes", "No"])
-        work_type = st.selectbox("Work Type", ["Self-employed", "Private", "Govt Job"])
+st.title("🧾 Stroke Risk Form")
 
-        st.subheader("🩺 " + ("Health Info" if lang == "English" else "Infos Santé"))
-        smoking = st.selectbox("Smoking Status", ["Formerly smoked", "Never smoked", "Smokes"])
-        glucose = st.number_input("Average Glucose Level (mg/dL)")
-        heart_disease = st.radio("Heart Disease?", ["Yes", "No"])
-        hypertension = st.radio("High Blood Pressure?", ["Yes", "No"])
-        consent = st.checkbox("✔️ " + ("I agree to the disclaimer" if lang == "English" else "J'accepte la clause de non-responsabilité"))
+with st.form("user_data_form"):
+    age = st.number_input("Enter your Age", min_value=1, max_value=120, value=25)
+    gender = st.selectbox("Gender", ["Male", "Female", "Other"])
+    hypertension = st.selectbox("Do you have hypertension?", ["Yes", "No"])
+    heart_disease = st.selectbox("Do you have heart disease?", ["Yes", "No"])
+    ever_married = st.selectbox("Have you ever been married?", ["Yes", "No"])
+    work_type = st.selectbox("Work Type", ["Private", "Self-employed", "Govt Job", "Children", "Never worked"])
+    smoking_status = st.selectbox("Smoking Status", ["Never smoked", "Formerly smoked", "Smokes"])
+    bmi = st.number_input("Enter your BMI", min_value=10.0, max_value=60.0, value=22.0)
 
-        if st.form_submit_button("Submit"):
-            if consent:
-                st.success("✅ " + ("Form submitted! Go to Results page." if lang == "English" else "Formulaire soumis ! Allez à la page Résultats."))
-            else:
-                st.error("❗" + ("Please agree to proceed." if lang == "English" else "Veuillez accepter pour continuer."))
+    submitted = st.form_submit_button("Submit")
+    if submitted:
+        st.session_state.user_data = {
+            "age": age, "gender": gender, "hypertension": hypertension,
+            "heart_disease": heart_disease, "ever_married": ever_married,
+            "work_type": work_type, "smoking_status": smoking_status, "bmi": bmi
+        }
+        st.success("Data submitted successfully. Proceed to Results.")
