@@ -6,6 +6,16 @@ import joblib
 
 # Page title
 st.set_page_config(page_title="Stroke Risk Assessment", layout="wide")
+
+# Hide Streamlit default elements and sidebar
+st.markdown("""
+    <style>
+        #MainMenu, footer, header {visibility: hidden;}
+        [data-testid="stSidebar"] {display: none;}
+        [data-testid="collapsedControl"] {display: none;}
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("📝 Stroke Risk Assessment")  # Static title without translation
 
 # Custom Navbar
