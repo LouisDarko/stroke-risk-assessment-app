@@ -47,10 +47,10 @@ st.markdown("""
         }
     </style>
     <div class="custom-nav">
-        <a href='/Home' target='_self'>🏠 Home</a>
-        <a href='/Risk_Assessment' target='_self'>📝 Risk Assessment</a>
-        <a href='/Results' target='_self'>📊 Results</a>
-        <a href='/Recommendations' target='_self'>🤝🏾 Recommendations</a>
+        <a href='/Home' target='_self'>Home</a>
+        <a href='/Risk_Assessment' target='_self'>Risk Assessment</a>
+        <a href='/Results' target='_self'>Results</a>
+        <a href='/Recommendations' target='_self'>Recommendations</a>
     </div>
 """, unsafe_allow_html=True)
 
@@ -208,35 +208,43 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Custom Footer with Developer Credit
+# Custom Footer with Developer Credit and Transparent Background
 st.markdown("""
     <style>
         .custom-footer {
-            background-color: #4C9D70;
+            background-color: rgba(76, 157, 112, 0.6);
             color: white;
-            padding: 20px;
+            padding: 30px 0;
             border-radius: 12px;
             margin-top: 40px;
             text-align: center;
             font-size: 14px;
+            width: 100%;
+            position: relative;
         }
         .custom-footer a {
             color: white;
             text-decoration: none;
-            margin: 0 10px;
+            margin: 0 15px;
         }
         .custom-footer a:hover {
             text-decoration: underline;
         }
+        .footer-text {
+            width: 80%;
+            margin: 0 auto;
+        }
     </style>
     <div class="custom-footer">
-        <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
-        <p>
-            <a href='/Home' target='_self'>🏠 Home</a>
-            <a href='/Risk_Assessment' target='_self'>📝 Risk Assessment</a>
-            <a href='/Results' target='_self'>📊 Results</a>
-            <a href='/Recommendations' target='_self'>🤝🏾 Recommendations</a>
-        </p>
-        <p style="font-size: 12px; margin-top: 10px;">Developed by Victoria Mends</p>
+        <div class="footer-text">
+            <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
+            <p>
+                <a href='/Home' target='_self'>Home</a>
+                <a href='/Risk_Assessment' target='_self'>Risk Assessment</a>
+                <a href='/Results' target='_self'>Results</a>
+                <a href='/Recommendations' target='_self'>Recommendations</a>
+            </p>
+            <p style="font-size: 12px; margin-top: 10px;">Developed by Victoria Mends</p>
+        </div>
     </div>
 """, unsafe_allow_html=True)
