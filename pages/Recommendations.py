@@ -5,36 +5,46 @@ import streamlit as st
 
 # Page configuration
 st.set_page_config(page_title="Stroke Risk Recommendations", layout="wide")
-st.title("💡 Stroke Prevention Recommendations")
 
-# Navigation Bar
+# Hide Streamlit default elements and sidebar
 st.markdown("""
     <style>
-        .nav-menu {
-            background-color: #4C9D70;
-            padding: 15px;
-            border-radius: 12px;
+        #MainMenu, footer, header {visibility: hidden;}
+        [data-testid="stSidebar"] {display: none;}
+        [data-testid="collapsedControl"] {display: none;}
+    </style>
+""", unsafe_allow_html=True)
+
+st.title("💡 Stroke Prevention Recommendations")
+
+# Custom Navbar
+st.markdown("""
+    <style>
+        .custom-nav {
+            background-color: #e8f5e9;
+            padding: 15px 0;
+            border-radius: 10px;
             display: flex;
             justify-content: center;
-            gap: 40px;
+            gap: 60px;
+            margin-bottom: 30px;
             font-size: 18px;
-            margin-bottom: 40px;
+            font-weight: 600;
         }
-        .nav-menu a {
-            color: white;
+        .custom-nav a {
             text-decoration: none;
-            font-weight: bold;
+            color: #4C9D70;
         }
-        .nav-menu a:hover {
+        .custom-nav a:hover {
+            color: #388e3c;
             text-decoration: underline;
         }
     </style>
-
-    <div class='nav-menu'>
-        <a href='/' target='_self'>🏠 Home</a>
-        <a href='/Risk_Assessment' target='_self'>📝 Risk Assessment</a>
-        <a href='/Results' target='_self'>📊 Results</a>
-        <a href='/Recommendations' target='_self'>🤝🏾 Recommendations</a>
+    <div class="custom-nav">
+        <a href='/Home' target='_self'>Home</a>
+        <a href='/Risk_Assessment' target='_self'>Risk Assessment</a>
+        <a href='/Results' target='_self'>Results</a>
+        <a href='/Recommendations' target='_self'>Recommendations</a>
     </div>
 """, unsafe_allow_html=True)
 
@@ -115,3 +125,45 @@ with col1:
     st.page_link("pages/Risk_Assessment.py", label="Reassess Risk", icon="🔁")
 with col2:
     st.page_link("app.py", label="Back to Home", icon="🏠")
+
+
+# Custom Footer with Developer Credit and Transparent Background
+st.markdown("""
+    <style>
+        .custom-footer {
+            background-color: rgba(76, 157, 112, 0.6);
+            color: white;
+            padding: 30px 0;
+            border-radius: 12px;
+            margin-top: 40px;
+            text-align: center;
+            font-size: 14px;
+            width: 100%;
+            position: relative;
+        }
+        .custom-footer a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+        }
+        .custom-footer a:hover {
+            text-decoration: underline;
+        }
+        .footer-text {
+            width: 80%;
+            margin: 0 auto;
+        }
+    </style>
+    <div class="custom-footer">
+        <div class="footer-text">
+            <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
+            <p>
+                <a href='/Home' target='_self'>Home</a>
+                <a href='/Risk_Assessment' target='_self'>Risk Assessment</a>
+                <a href='/Results' target='_self'>Results</a>
+                <a href='/Recommendations' target='_self'>Recommendations</a>
+            </p>
+            <p style="font-size: 12px; margin-top: 10px;">Developed by Victoria Mends</p>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
