@@ -6,7 +6,7 @@ st.set_page_config(page_title="Stroke Risk Recommendations", layout="wide")
 # Hide Streamlit default elements and sidebar
 st.markdown("""
     <style>
-        #MainMenu, footer, header {visibility: hidden;}
+        #MainMenu, header {visibility: hidden;}
         [data-testid="stSidebar"] {display: none;}
         [data-testid="collapsedControl"] {display: none;}
     </style>
@@ -136,6 +136,7 @@ st.markdown("""
             font-size: 14px;
             width: 100%;
             position: relative;
+            bottom: 0;
         }
         .custom-footer a {
             color: white;
@@ -164,7 +165,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# Make sure that footer sticks to the bottom (if there's a lot of content on the page)
+# Ensure the footer stays at the bottom when the page content is small
 st.markdown("""
     <style>
         .stApp {
