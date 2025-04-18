@@ -25,34 +25,34 @@ st.title("📊 Stroke Risk Results")
 
 
 
-# Navigation Bar
+# Custom Navbar
 st.markdown("""
     <style>
-        .nav-menu {
-            background-color: #4C9D70;
-            padding: 15px;
-            border-radius: 12px;
+        .custom-nav {
+            background-color: #e8f5e9;
+            padding: 15px 0;
+            border-radius: 10px;
             display: flex;
             justify-content: center;
-            gap: 40px;
+            gap: 60px;
+            margin-bottom: 30px;
             font-size: 18px;
-            margin-bottom: 40px;
+            font-weight: 600;
         }
-        .nav-menu a {
-            color: white;
+        .custom-nav a {
             text-decoration: none;
-            font-weight: bold;
+            color: #4C9D70;
         }
-        .nav-menu a:hover {
+        .custom-nav a:hover {
+            color: #388e3c;
             text-decoration: underline;
         }
     </style>
-
-    <div class='nav-menu'>
-        <a href='/' target='_self'>🏠 Home</a>
-        <a href='/Risk_Assessment' target='_self'>📝 Risk Assessment</a>
-        <a href='/Results' target='_self'>📊 Results</a>
-        <a href='/Recommendations' target='_self'>🤝🏾 Recommendations</a>
+    <div class="custom-nav">
+        <a href='/Home' target='_self'>Home</a>
+        <a href='/Risk_Assessment' target='_self'>Risk Assessment</a>
+        <a href='/Results' target='_self'>Results</a>
+        <a href='/Recommendations' target='_self'>Recommendations</a>
     </div>
 """, unsafe_allow_html=True)
 
