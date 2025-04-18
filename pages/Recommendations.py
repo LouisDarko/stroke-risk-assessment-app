@@ -1,8 +1,5 @@
 import streamlit as st
 
-
-
-
 # Page configuration
 st.set_page_config(page_title="Stroke Risk Recommendations", layout="wide")
 
@@ -126,7 +123,6 @@ with col1:
 with col2:
     st.page_link("app.py", label="Back to Home", icon="🏠")
 
-
 # Custom Footer with Developer Credit and Transparent Background
 st.markdown("""
     <style>
@@ -166,4 +162,18 @@ st.markdown("""
             <p style="font-size: 12px; margin-top: 10px;">Developed by Victoria Mends</p>
         </div>
     </div>
+""", unsafe_allow_html=True)
+
+# Make sure that footer sticks to the bottom (if there's a lot of content on the page)
+st.markdown("""
+    <style>
+        .stApp {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .stApp > .main {
+            flex: 1;
+        }
+    </style>
 """, unsafe_allow_html=True)
