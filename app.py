@@ -3,31 +3,17 @@ from gtts import gTTS
 import base64
 import os
 
-
-
-# Page configuration
+# Page config
 st.set_page_config(page_title="Stroke Risk Prediction", layout="wide")
 
-# # Hide Streamlit default elements
-# st.markdown("""
-#     <style>
-#         #MainMenu, footer, header {visibility: hidden;}
-#     </style>
-# """, unsafe_allow_html=True)
-
-# Hide Streamlit default elements and sidebar
+# Hide Streamlit default elements
 st.markdown("""
     <style>
         #MainMenu, footer, header {visibility: hidden;}
-        [data-testid="stSidebar"] {display: none;}
-        [data-testid="collapsedControl"] {display: none;}
     </style>
 """, unsafe_allow_html=True)
 
-
-
-
-# Navigation Bar
+# Navigation bar
 st.markdown("""
     <style>
         .nav-menu {
@@ -58,31 +44,77 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-
-# Header and introduction
+# Header content
 st.title("🧠 Learn About Stroke")
+
 intro_text = """
 A stroke happens when the blood supply to part of your brain is interrupted or reduced, 
 preventing brain tissue from getting oxygen and nutrients. Early detection can save lives.
 """
 st.markdown(f"<p style='font-size:18px;'>{intro_text}</p>", unsafe_allow_html=True)
 
-# Text-to-speech
-def create_audio(text):
-    try:
+# Full page text
+full_page_text = """
+A stroke happens when the blood supply to part of your brain is interrupted or reduced,
+preventing brain tissue from getting oxygen and nutrients. Early detection can save lives.
+
+Types of Stroke:
+- Ischemic: Blockage in brain arteries.
+- Hemorrhagic: Burst blood vessels in the brain.
+- TIA: Temporary blockage (mini-stroke).
+
+Common Causes:
+- High blood pressure
+- Heart disease
+- Diabetes
+- Smoking
+- Obesity and cholesterol
+
+Prevention:
+- Control blood pressure & sugar
+- Exercise regularly
+- Eat a healthy diet
+- Stop smoking
+
+Symptoms:
+- Sudden numbness or weakness (face, arm, leg)
+- Confusion, speech trouble
+- Vision problems
+- Dizziness or balance issues
+
+Recognize a Stroke (FAST):
+- F: Face drooping
+- A: Arm weakness
+- S: Speech difficulty
+- T: Time to call emergency
+
+Stroke Statistics:
+- 2nd leading cause of death globally
+- 12.2 million cases in 2020
+- 5.5 million deaths annually
+"""
+
+# Generate audio file once
+def generate_audio(text, filename="page_audio.mp3"):
+    if not os.path.exists(filename):
         tts = gTTS(text, lang='en')
-        file_path = f"tts_intro.mp3"
-        tts.save(file_path)
-        with open(file_path, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode()
-            st.audio(f"data:audio/mp3;base64,{b64}", format="audio/mp3")
-        os.remove(file_path)
-    except Exception:
-        st.warning("❌ Audio not available.")
+        tts.save(filename)
+    with open(filename, "rb") as audio_file:
+        audio_bytes = audio_file.read()
+        b64_audio = base64.b64encode(audio_bytes).decode()
+        audio_html = f"""
+        <audio controls style="width: 100%;">
+            <source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3">
+            Your browser does not support the audio element.
+        </audio>
+        """
+        st.markdown(audio_html, unsafe_allow_html=True)
 
-create_audio(intro_text)
+# Audio player for full page
+st.subheader("🔊 Listen to this page")
+generate_audio(full_page_text)
 
-# Stroke Information Sections
+# Content sections
 def info_card(icon, title, content):
     st.markdown(f"""
         <div style='background-color:#f0f8ff; padding:25px; border-radius:15px; margin-bottom:20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);'>
@@ -101,7 +133,6 @@ with col1:
         <li><strong>TIA:</strong> Temporary blockage (mini-stroke).</li>
     </ul>
     """)
-
     info_card("❗", "Common Causes", """
     <ul>
         <li>High blood pressure</li>
@@ -111,7 +142,6 @@ with col1:
         <li>Obesity and cholesterol</li>
     </ul>
     """)
-
     info_card("🩺", "Prevention", """
     <ul>
         <li>Control blood pressure & sugar</li>
@@ -130,7 +160,6 @@ with col2:
         <li>Dizziness or balance issues</li>
     </ul>
     """)
-
     info_card("⏱️", "Recognize a Stroke (FAST)", """
     <strong>Use the FAST test:</strong>
     <ul>
@@ -140,7 +169,6 @@ with col2:
         <li><strong>T:</strong> Time to call emergency</li>
     </ul>
     """)
-
     info_card("📊", "Stroke Statistics", """
     <ul>
         <li>2nd leading cause of death globally</li>
