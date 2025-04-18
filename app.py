@@ -126,68 +126,112 @@ def generate_audio(text, filename="full_page.mp3"):
 
 generate_audio(full_page_text)
 
-# Section cards
+# Section cards with consistent size using Flexbox
+st.markdown("""
+    <style>
+        .info-cards-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        .info-card {
+            background-color: #f0f8ff;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            width: 48%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 300px;
+        }
+        .info-card h4 {
+            font-size: 22px;
+            margin-bottom: 15px;
+        }
+        .info-card ul {
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .info-card a {
+            color: #4C9D70;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .info-card a:hover {
+            color: #388e3c;
+            text-decoration: underline;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# Info Card content
 def info_card(icon, title, content):
-    st.markdown(f"""
-        <div style='background-color:#f0f8ff; padding:25px; border-radius:15px; margin-bottom:20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);'>
-            <h4 style='font-size:22px;'>{icon} {title}</h4>
-            <div style='font-size:16px;'>{content}</div>
+    return f"""
+        <div class="info-card">
+            <h4>{icon} {title}</h4>
+            <div>{content}</div>
         </div>
-    """, unsafe_allow_html=True)
+    """
 
-col1, col2 = st.columns(2)
+# Cards in columns
+cards_content = [
+    ("🧩", "Types of Stroke", """
+        <ul>
+            <li><strong>Ischemic:</strong> Blockage in brain arteries.</li>
+            <li><strong>Hemorrhagic:</strong> Burst blood vessels in the brain.</li>
+            <li><strong>TIA:</strong> Temporary blockage (mini-stroke).</li>
+        </ul>
+    """),
+    ("❗", "Common Causes", """
+        <ul>
+            <li>High blood pressure</li>
+            <li>Heart disease</li>
+            <li>Diabetes</li>
+            <li>Smoking</li>
+            <li>Obesity and cholesterol</li>
+        </ul>
+    """),
+    ("🩺", "Prevention", """
+        <ul>
+            <li>Control blood pressure & sugar</li>
+            <li>Exercise regularly</li>
+            <li>Eat a healthy diet</li>
+            <li>Stop smoking</li>
+        </ul>
+    """),
+    ("⚠️", "Symptoms", """
+        <ul>
+            <li>Sudden numbness or weakness (face, arm, leg)</li>
+            <li>Confusion, speech trouble</li>
+            <li>Vision problems</li>
+            <li>Dizziness or balance issues</li>
+        </ul>
+    """),
+    ("⏱️", "Recognize a Stroke (FAST)", """
+        <strong>Use the FAST test:</strong>
+        <ul>
+            <li><strong>F:</strong> Face drooping</li>
+            <li><strong>A:</strong> Arm weakness</li>
+            <li><strong>S:</strong> Speech difficulty</li>
+            <li><strong>T:</strong> Time to call emergency</li>
+        </ul>
+    """),
+    ("📊", "Stroke Statistics", """
+        <ul>
+            <li>2nd leading cause of death globally</li>
+            <li>12.2 million cases in 2020</li>
+            <li>5.5 million deaths annually</li>
+        </ul>
+    """)
+]
 
-with col1:
-    info_card("🧩", "Types of Stroke", """
-    <ul>
-        <li><strong>Ischemic:</strong> Blockage in brain arteries.</li>
-        <li><strong>Hemorrhagic:</strong> Burst blood vessels in the brain.</li>
-        <li><strong>TIA:</strong> Temporary blockage (mini-stroke).</li>
-    </ul>
-    """)
-    info_card("❗", "Common Causes", """
-    <ul>
-        <li>High blood pressure</li>
-        <li>Heart disease</li>
-        <li>Diabetes</li>
-        <li>Smoking</li>
-        <li>Obesity and cholesterol</li>
-    </ul>
-    """)
-    info_card("🩺", "Prevention", """
-    <ul>
-        <li>Control blood pressure & sugar</li>
-        <li>Exercise regularly</li>
-        <li>Eat a healthy diet</li>
-        <li>Stop smoking</li>
-    </ul>
-    """)
+# Render all cards in the container
+card_elements = "".join([info_card(card[0], card[1], card[2]) for card in cards_content])
 
-with col2:
-    info_card("⚠️", "Symptoms", """
-    <ul>
-        <li>Sudden numbness or weakness (face, arm, leg)</li>
-        <li>Confusion, speech trouble</li>
-        <li>Vision problems</li>
-        <li>Dizziness or balance issues</li>
-    </ul>
-    """)
-    info_card("⏱️", "Recognize a Stroke (FAST)", """
-    <strong>Use the FAST test:</strong>
-    <ul>
-        <li><strong>F:</strong> Face drooping</li>
-        <li><strong>A:</strong> Arm weakness</li>
-        <li><strong>S:</strong> Speech difficulty</li>
-        <li><strong>T:</strong> Time to call emergency</li>
-    </ul>
-    """)
-    info_card("📊", "Stroke Statistics", """
-    <ul>
-        <li>2nd leading cause of death globally</li>
-        <li>12.2 million cases in 2020</li>
-        <li>5.5 million deaths annually</li>
-    </ul>
-    """)
+st.markdown(f"<div class='info-cards-container'>{card_elements}</div>", unsafe_allow_html=True)
 
 # Call to Action (CTA)
 st.markdown("""
