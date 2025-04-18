@@ -136,7 +136,6 @@ st.markdown("""
             font-size: 14px;
             width: 100%;
             position: relative;
-            bottom: 0;
         }
         .custom-footer a {
             color: white;
