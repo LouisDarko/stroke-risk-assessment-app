@@ -11,7 +11,19 @@ import os
 
 # Page title and layout
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
+
+# Hide Streamlit default elements and sidebar
+st.markdown("""
+    <style>
+        #MainMenu, footer, header {visibility: hidden;}
+        [data-testid="stSidebar"] {display: none;}
+        [data-testid="collapsedControl"] {display: none;}
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("📊 Stroke Risk Results")
+
+
 
 # Navigation Bar
 st.markdown("""
@@ -155,3 +167,47 @@ with col1:
 
 # Reset the flag so the user cannot directly access the Results page without calculating the risk
 st.session_state.risk_calculated = False
+
+
+
+
+# Custom Footer with Developer Credit and Transparent Background
+st.markdown("""
+    <style>
+        .custom-footer {
+            background-color: rgba(76, 157, 112, 0.6);
+            color: white;
+            padding: 30px 0;
+            border-radius: 12px;
+            margin-top: 40px;
+            text-align: center;
+            font-size: 14px;
+            width: 100%;
+            position: relative;
+        }
+        .custom-footer a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+        }
+        .custom-footer a:hover {
+            text-decoration: underline;
+        }
+        .footer-text {
+            width: 80%;
+            margin: 0 auto;
+        }
+    </style>
+    <div class="custom-footer">
+        <div class="footer-text">
+            <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
+            <p>
+                <a href='/Home' target='_self'>Home</a>
+                <a href='/Risk_Assessment' target='_self'>Risk Assessment</a>
+                <a href='/Results' target='_self'>Results</a>
+                <a href='/Recommendations' target='_self'>Recommendations</a>
+            </p>
+            <p style="font-size: 12px; margin-top: 10px;">Developed by Victoria Mends</p>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
