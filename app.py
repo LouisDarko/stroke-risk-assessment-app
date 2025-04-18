@@ -6,37 +6,47 @@ import os
 # Set page configuration
 st.set_page_config(page_title="Stroke Risk Prediction", layout="wide")
 
-# Hide Streamlit default elements
+# Hide Streamlit default elements and sidebar
 st.markdown("""
     <style>
         #MainMenu, footer, header {visibility: hidden;}
+        [data-testid="stSidebar"] {display: none;}
+        [data-testid="collapsedControl"] {display: none;}
     </style>
 """, unsafe_allow_html=True)
 
-# Custom navigation bar
+# Custom Header
+st.markdown("""
+    <div style="background-color: #4C9D70; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+        <h1 style="color: white; text-align: center; margin: 0;">🧠 Stroke Risk Assessment Tool</h1>
+        <p style="color: white; text-align: center; font-size: 18px;">Empowering you to take control of your brain health</p>
+    </div>
+""", unsafe_allow_html=True)
+
+# Custom Navbar
 st.markdown("""
     <style>
-        .nav-menu {
-            background-color: #4C9D70;
-            padding: 15px;
-            border-radius: 12px;
+        .custom-nav {
+            background-color: #e8f5e9;
+            padding: 15px 0;
+            border-radius: 10px;
             display: flex;
             justify-content: center;
-            gap: 40px;
+            gap: 60px;
+            margin-bottom: 30px;
             font-size: 18px;
-            margin-bottom: 40px;
+            font-weight: 600;
         }
-        .nav-menu a {
-            color: white;
+        .custom-nav a {
             text-decoration: none;
-            font-weight: bold;
+            color: #4C9D70;
         }
-        .nav-menu a:hover {
+        .custom-nav a:hover {
+            color: #388e3c;
             text-decoration: underline;
         }
     </style>
-
-    <div class='nav-menu'>
+    <div class="custom-nav">
         <a href='/Home' target='_self'>🏠 Home</a>
         <a href='/Risk_Assessment' target='_self'>📝 Risk Assessment</a>
         <a href='/Results' target='_self'>📊 Results</a>
@@ -93,6 +103,9 @@ Stroke Statistics:
 - 2nd leading cause of death globally
 - 12.2 million cases in 2020
 - 5.5 million deaths annually
+
+- Assess Your Stroke Risk
+- Click below to use our intelligent tool and evaluate your risk level
 """
 
 # Generate full-page audio with controls
@@ -175,6 +188,7 @@ with col2:
         <li>5.5 million deaths annually</li>
     </ul>
     """)
+
 
 # CTA
 st.markdown("""
