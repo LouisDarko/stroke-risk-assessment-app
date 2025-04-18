@@ -8,12 +8,22 @@ import os
 # Page configuration
 st.set_page_config(page_title="Stroke Risk Prediction", layout="wide")
 
-# Hide Streamlit default elements
+# # Hide Streamlit default elements
+# st.markdown("""
+#     <style>
+#         #MainMenu, footer, header {visibility: hidden;}
+#     </style>
+# """, unsafe_allow_html=True)
+
+# Hide Streamlit default elements and sidebar
 st.markdown("""
     <style>
         #MainMenu, footer, header {visibility: hidden;}
+        [data-testid="stSidebar"] {display: none;}
+        [data-testid="collapsedControl"] {display: none;}
     </style>
 """, unsafe_allow_html=True)
+
 
 
 
