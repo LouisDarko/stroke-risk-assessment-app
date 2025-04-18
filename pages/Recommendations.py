@@ -123,6 +123,8 @@ with col1:
 with col2:
     st.page_link("app.py", label="Back to Home", icon="🏠")
 
+
+
 # Custom Footer with Developer Credit and Transparent Background
 st.markdown("""
     <style>
@@ -162,20 +164,6 @@ st.markdown("""
             <p style="font-size: 12px; margin-top: 10px;">Developed by Victoria Mends</p>
         </div>
     </div>
-""", unsafe_allow_html=True)
-
-# Ensure the footer stays at the bottom when the page content is small
-st.markdown("""
-    <style>
-        .stApp {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        .stApp > .main {
-            flex: 1;
-        }
-    </style>
 """, unsafe_allow_html=True)
 
 
