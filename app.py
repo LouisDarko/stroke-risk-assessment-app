@@ -189,8 +189,7 @@ with col2:
     </ul>
     """)
 
-
-# CTA
+# Call to Action (CTA)
 st.markdown("""
     <div style='background-color:#e6f2ff; padding:30px; border-radius:12px; text-align:center; margin-top:30px;'>
         <h4>📝 Assess Your Stroke Risk</h4>
@@ -207,4 +206,37 @@ st.markdown("""
         transform: scale(1.05);
     }
     </style>
+""", unsafe_allow_html=True)
+
+# Custom Footer with Developer Credit
+st.markdown("""
+    <style>
+        .custom-footer {
+            background-color: #4C9D70;
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 40px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .custom-footer a {
+            color: white;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .custom-footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <div class="custom-footer">
+        <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
+        <p>
+            <a href='/Home' target='_self'>🏠 Home</a>
+            <a href='/Risk_Assessment' target='_self'>📝 Risk Assessment</a>
+            <a href='/Results' target='_self'>📊 Results</a>
+            <a href='/Recommendations' target='_self'>🤝🏾 Recommendations</a>
+        </p>
+        <p style="font-size: 12px; margin-top: 10px;">Developed by Victoria Mends</p>
+    </div>
 """, unsafe_allow_html=True)
