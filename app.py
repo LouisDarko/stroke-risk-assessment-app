@@ -146,6 +146,7 @@ st.markdown("""
             flex-direction: column;
             justify-content: space-between;
             height: 300px;
+            box-sizing: border-box; /* Fix issue where padding increases card height */
         }
         .info-card h4 {
             font-size: 22px;
@@ -246,7 +247,7 @@ st.markdown("""
     </div>
     <style>
     button:hover {
-        background-color: #3e8e41;
+        background-color: #3e8e3c;
         transform: scale(1.05);
     }
     </style>
