@@ -106,7 +106,7 @@ st.markdown("""
     </style>
 
     <div class="hero-banner">
-        <img src="assets/strokeprediction.png" alt="Stroke Prediction Hero Banner">
+        <img src="strokeprediction.png" alt="Stroke Prediction Hero Banner">
         <div class="hero-text-overlay">
             <h2>Early Detection Saves Lives</h2>
             <p>Explore stroke prevention strategies with our intelligent tool</p>
