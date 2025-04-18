@@ -3,7 +3,7 @@ from gtts import gTTS
 import base64
 import os
 
-# Page config
+# Set page configuration
 st.set_page_config(page_title="Stroke Risk Prediction", layout="wide")
 
 # Hide Streamlit default elements
@@ -13,7 +13,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Navigation bar
+# Custom navigation bar
 st.markdown("""
     <style>
         .nav-menu {
@@ -44,18 +44,19 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# Header content
+# Header and Intro
 st.title("🧠 Learn About Stroke")
-
 intro_text = """
 A stroke happens when the blood supply to part of your brain is interrupted or reduced, 
 preventing brain tissue from getting oxygen and nutrients. Early detection can save lives.
 """
 st.markdown(f"<p style='font-size:18px;'>{intro_text}</p>", unsafe_allow_html=True)
 
-# Full page text
+# All content for audio narration (combine all section texts)
 full_page_text = """
-A stroke happens when the blood supply to part of your brain is interrupted or reduced,
+Learn About Stroke
+
+A stroke happens when the blood supply to part of your brain is interrupted or reduced, 
 preventing brain tissue from getting oxygen and nutrients. Early detection can save lives.
 
 Types of Stroke:
@@ -71,7 +72,7 @@ Common Causes:
 - Obesity and cholesterol
 
 Prevention:
-- Control blood pressure & sugar
+- Control blood pressure and sugar
 - Exercise regularly
 - Eat a healthy diet
 - Stop smoking
@@ -94,27 +95,25 @@ Stroke Statistics:
 - 5.5 million deaths annually
 """
 
-# Generate audio file once
-def generate_audio(text, filename="page_audio.mp3"):
-    if not os.path.exists(filename):
-        tts = gTTS(text, lang='en')
-        tts.save(filename)
-    with open(filename, "rb") as audio_file:
-        audio_bytes = audio_file.read()
-        b64_audio = base64.b64encode(audio_bytes).decode()
+# Generate full-page audio with controls
+def generate_audio(text, filename="full_page.mp3"):
+    tts = gTTS(text, lang='en')
+    tts.save(filename)
+    with open(filename, "rb") as f:
+        audio_data = f.read()
+        b64_audio = base64.b64encode(audio_data).decode()
         audio_html = f"""
-        <audio controls style="width: 100%;">
-            <source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3">
-            Your browser does not support the audio element.
-        </audio>
+            <audio controls style="width: 100%; margin-top: 20px;">
+                <source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3">
+                Your browser does not support the audio element.
+            </audio>
         """
+        st.markdown("### 🔊 Listen to this page")
         st.markdown(audio_html, unsafe_allow_html=True)
 
-# Audio player for full page
-st.subheader("🔊 Listen to this page")
 generate_audio(full_page_text)
 
-# Content sections
+# Section cards
 def info_card(icon, title, content):
     st.markdown(f"""
         <div style='background-color:#f0f8ff; padding:25px; border-radius:15px; margin-bottom:20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);'>
@@ -177,7 +176,7 @@ with col2:
     </ul>
     """)
 
-# Call to Action
+# CTA
 st.markdown("""
     <div style='background-color:#e6f2ff; padding:30px; border-radius:12px; text-align:center; margin-top:30px;'>
         <h4>📝 Assess Your Stroke Risk</h4>
