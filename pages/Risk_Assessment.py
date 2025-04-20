@@ -6,6 +6,7 @@ import joblib
 
 # Page title
 st.set_page_config(page_title="Stroke Risk Assessment", layout="wide")
+st.write("Scikit-learn version:", sklearn.__version__)
 
 # Hide Streamlit default elements and sidebar
 st.markdown("""
