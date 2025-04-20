@@ -6,6 +6,6 @@ joblib
 gTTS
 openai
 scikit-learn
-
+cloudpickle
 
 
