@@ -3,6 +3,8 @@ import pandas as pd
 import joblib
 import sklearn
 import os
+import cloudpickle
+
 
 
 
@@ -86,14 +88,15 @@ st.markdown("""
 
 
 # Load the trained model
+
 @st.cache_resource
 def load_model():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     model_path = os.path.join(script_dir, "model_compressed.pkl")
-    return joblib.load(model_path)
+    with open(model_path, "rb") as f:
+        return cloudpickle.load(f)
 
 model = load_model()
-
 
 # Encode input fields
 def preprocess_input(data):
