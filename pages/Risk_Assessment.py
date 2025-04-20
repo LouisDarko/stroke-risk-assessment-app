@@ -154,7 +154,7 @@ if submit_button:
             "work_type": work_type,
             "hypertension": hypertension,
             "heart_disease": heart_disease,
-            "avg_glucose_level": avg_glucose,
+            "avg_glucose_level": avg_glucose_level,
             "smoking_status": smoking_status
         }
         X_input = preprocess_input(input_data)
