@@ -93,8 +93,7 @@ st.markdown("""
 def load_model():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     model_path = os.path.join(script_dir, "model_compressed.pkl")
-    with open(model_path, "rb") as f:
-        return cloudpickle.load(f)
+    return joblib.load(model_path)
 
 model = load_model()
 
