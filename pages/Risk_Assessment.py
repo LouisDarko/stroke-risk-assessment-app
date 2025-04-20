@@ -144,7 +144,7 @@ submit_button = st.button("Calculate Stroke Risk 📈")
 if submit_button:
     if not st.session_state.consent:
         st.error("You must agree to the terms before proceeding!")
-    elif age < 1 or avg_glucose <= 0:
+    elif age < 1 or avg_glucose_level <= 0:
         st.error("Invalid input values.")
     else:
         input_data = {
