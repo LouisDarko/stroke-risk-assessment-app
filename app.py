@@ -1,7 +1,7 @@
 import streamlit as st
 from gtts import gTTS
 import base64
-import sklearn
+
 
 # Encode image as Base64
 def get_base64_image(image_path):
@@ -17,8 +17,7 @@ st.set_page_config(page_title="Stroke Risk Prediction", layout="wide")
 
 
 
-# Print the scikit-learn version
-st.write("scikit-learn version:", sklearn.__version__)
+
 
 # Hide Streamlit default elements and sidebar
 st.markdown("""
