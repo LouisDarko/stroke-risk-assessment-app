@@ -108,7 +108,7 @@ def preprocess_input(data):
     return pd.DataFrame([{
         "age": data["age"],
         "gender": gender_map.get(data["gender"], 0),
-        "ever_married": marital_map.get(data["marital_status"], 0),
+        "marital_status": marital_map.get(data["marital_status"], 0),
         "work_type": work_map.get(data["work_type"], 0),
         "hypertension": 1 if data["hypertension"] == "Yes" else 0,
         "heart_disease": 1 if data["heart_disease"] == "Yes" else 0,
@@ -127,7 +127,7 @@ with st.expander("👤 Personal Information", expanded=True):
 with st.expander("🩺 Health Information", expanded=True):
     hypertension = st.radio("Do you have high blood pressure?", ["Yes", "No"])
     heart_disease = st.radio("Do you have any heart disease?", ["Yes", "No"])
-    avg_glucose = st.number_input("Average Glucose Level (mg/dL)", min_value=1, max_value=500)
+    avg_glucose_level = st.number_input("Average Glucose Level (mg/dL)", min_value=1, max_value=500)
     smoking_status = st.selectbox("Smoking Status", ["Never smoked", "Formerly smoked", "Smokes"])
 
 # Disclaimer
@@ -154,7 +154,7 @@ if submit_button:
             "work_type": work_type,
             "hypertension": hypertension,
             "heart_disease": heart_disease,
-            "avg_glucose": avg_glucose,
+            "avg_glucose_level": avg_glucose,
             "smoking_status": smoking_status
         }
         X_input = preprocess_input(input_data)
