@@ -112,7 +112,7 @@ def preprocess_input(data):
         "work_type": work_map.get(data["work_type"], 0),
         "hypertension": 1 if data["hypertension"] == "Yes" else 0,
         "heart_disease": 1 if data["heart_disease"] == "Yes" else 0,
-        "avg_glucose_level": data["avg_glucose"],
+        "avg_glucose_level": data["avg_glucose_level"],
         "smoking_status": smoke_map.get(data["smoking_status"], 0)
     }])
 
