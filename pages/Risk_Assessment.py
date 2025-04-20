@@ -87,11 +87,12 @@ st.markdown("""
 # Load the trained model
 @st.cache_resource
 def load_model():
-    import os
-    model_path = ("model_compressed.pkl")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    model_path = os.path.join(script_dir, "model_compressed.pkl")
     return joblib.load(model_path)
 
 model = load_model()
+
 
 # Encode input fields
 def preprocess_input(data):
