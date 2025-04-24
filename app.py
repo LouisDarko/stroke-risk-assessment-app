@@ -13,17 +13,15 @@ def get_base64_image(image_path):
 
 # Get Base64 image strings
 encoded_image0 = get_base64_image("strokeprediction.png")  # original hero
-encoded_image1 = get_base64_image("image2.png")          # first new slide
-encoded_image2 = get_base64_image("image3.png")          # second new slide
-
-
+encoded_image1 = get_base64_image("image2.png")           # first new slide
+encoded_image2 = get_base64_image("image3.png")           # second new slide
 
 # Hide Streamlit default elements and sidebar
 st.markdown("""
     <style>
         #MainMenu, footer, header {visibility: hidden;}
-        [data-testid="stSidebar"] {display: none;}
-        [data-testid="collapsedControl"] {display: none;}
+        [data-testid=\"stSidebar\"] {display: none;}
+        [data-testid=\"collapsedControl\"] {display: none;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -72,22 +70,28 @@ st.markdown(f"""
         .hero-banner {{
             position: relative;
             width: 100%;
+            height: 500px;
             border-radius: 15px;
             overflow: hidden;
             margin-bottom: 30px;
+        }}
+        .hero-banner .slides {{
+            position: relative;
+            width: 100%;
+            height: 100%;
         }}
         .hero-banner .slides img {{
             position: absolute;
             top: 0; left: 0;
             width: 100%;
-            height: auto;
+            height: 100%;
             object-fit: cover;
             opacity: 0;
             animation: slideAnim 12s infinite;
         }}
-        .hero-banner .slides img:nth-child(1) {{ animation-delay: 0s;  }}
-        .hero-banner .slides img:nth-child(2) {{ animation-delay: 4s;  }}
-        .hero-banner .slides img:nth-child(3) {{ animation-delay: 8s;  }}
+        .hero-banner .slides img:nth-child(1) {{ animation-delay: 0s; }}
+        .hero-banner .slides img:nth-child(2) {{ animation-delay: 4s; }}
+        .hero-banner .slides img:nth-child(3) {{ animation-delay: 8s; }}
 
         @keyframes slideAnim {{
             0%   {{ opacity: 1; }}
@@ -126,16 +130,15 @@ st.markdown(f"""
 st.title("🧠 Learn About Stroke")
 st.markdown("""
 <p style='font-size:18px;'>
-A stroke happens when the blood supply to part of your brain is interrupted or reduced, 
+A stroke happens when the blood supply to part of your brain is interrupted or reduced,
 preventing brain tissue from getting oxygen and nutrients. Early detection can save lives.
 </p>
 """, unsafe_allow_html=True)
 
-# Text for narration
-full_page_text = """
+# Full page text for narration\ nfull_page_text = """
 Learn About Stroke
 
-A stroke happens when the blood supply to part of your brain is interrupted or reduced, 
+A stroke happens when the blood supply to part of your brain is interrupted or reduced,
 preventing brain tissue from getting oxygen and nutrients. Early detection can save lives.
 
 Types of Stroke:
@@ -178,7 +181,8 @@ Assess Your Stroke Risk
 Click below to use our intelligent tool and evaluate your risk level
 """
 
-def generate_audio(text, filename="full_page.mp3"):
+# Generate audio narration
+ def generate_audio(text, filename="full_page.mp3"):
     tts = gTTS(text, lang='en')
     tts.save(filename)
     with open(filename, "rb") as f:
@@ -205,7 +209,6 @@ def info_card(icon, title, content):
     """, unsafe_allow_html=True)
 
 col1, col2 = st.columns(2)
-
 with col1:
     info_card("🧩", "Types of Stroke", """
     <ul>
@@ -231,7 +234,6 @@ with col1:
         <li>Stop smoking</li>
     </ul>
     """)
-
 with col2:
     info_card("⚠️", "Symptoms", """
     <ul>
