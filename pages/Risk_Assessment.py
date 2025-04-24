@@ -48,29 +48,29 @@ with st.expander("👤 Personal Information", expanded=True):
     )
     gender = st.selectbox(
         "Gender",
-        options=["Select option", "Male", "Female"],
+        ["Select option", "Male", "Female"],
         index=0, key="gender"
     )
     ever_married = st.selectbox(
         "Ever Married?",
-        options=["Select option", "Yes", "No"],
+        ["Select option", "Yes", "No"],
         index=0, key="ever_married"
     )
     work_type = st.selectbox(
         "Work Type",
-        options=["Select option", "Private", "Self-employed", "Govt_job", "Never_worked"],
+        ["Select option", "Private", "Self-employed", "Govt_job", "Never_worked"],
         index=0, key="work_type"
     )
 
 with st.expander("🩺 Health Information", expanded=True):
     hypertension = st.radio(
         "Do you have hypertension?",
-        options=["Select option", "Yes", "No"],
+        ["Select option", "Yes", "No"],
         index=0, key="hypertension"
     )
     heart_disease = st.radio(
         "Do you have heart disease?",
-        options=["Select option", "Yes", "No"],
+        ["Select option", "Yes", "No"],
         index=0, key="heart_disease"
     )
     avg_glucose_level = st.number_input(
@@ -80,7 +80,7 @@ with st.expander("🩺 Health Information", expanded=True):
     )
     smoking_status = st.selectbox(
         "Smoking Status",
-        options=["Select option", "never smoked", "formerly smoked", "smokes"],
+        ["Select option", "never smoked", "formerly smoked", "smokes"],
         index=0, key="smoking_status"
     )
 
@@ -95,63 +95,69 @@ st.checkbox("I agree to the terms and allow risk estimation", key="consent")
 
 # ── Calculate & Redirect ────────────────────────────────────────────────────────
 if st.button("Calculate Stroke Risk 📈"):
-    # validation
+    # basic validation
     if not st.session_state.consent:
         st.error("You must agree to the terms before proceeding!")
     elif (
-        st.session_state.gender == "Select option" or
-        st.session_state.ever_married == "Select option" or
-        st.session_state.work_type == "Select option" or
-        st.session_state.hypertension == "Select option" or
-        st.session_state.heart_disease == "Select option" or
-        st.session_state.smoking_status == "Select option" or
-        st.session_state.age < 18 or
-        st.session_state.avg_glucose_level <= 0
+        st.session_state.gender == "Select option"
+        or st.session_state.ever_married == "Select option"
+        or st.session_state.work_type == "Select option"
+        or st.session_state.hypertension == "Select option"
+        or st.session_state.heart_disease == "Select option"
+        or st.session_state.smoking_status == "Select option"
+        or st.session_state.age < 18
+        or st.session_state.avg_glucose_level <= 0
     ):
         st.error("Please complete all fields with valid values before submitting.")
     else:
-        # polynomial features
-        age   = st.session_state.age
-        gluc  = st.session_state.avg_glucose_level
-        age_sq, glu_sq = age**2, gluc**2
-        interaction = age * gluc
+        # compute polynomial features
+        age_val   = st.session_state.age
+        glu_val   = st.session_state.avg_glucose_level
+        age_sq    = age_val ** 2
+        glu_sq    = glu_val ** 2
+        interaction = age_val * glu_val
 
         # encoding maps
-        gender_map  = {"Male": 0, "Female": 1}
-        married_map = {"Yes": 1, "No": 0}
-        work_map    = {"Private": 0, "Self-employed": 1, "Govt_job": 2, "Never_worked": 3}
-        htn_map     = {"Yes": 1, "No": 0}
-        hd_map      = {"Yes": 1, "No": 0}
-        smoke_map   = {"never smoked": 0, "formerly smoked": 1, "smokes": 2}
+        gender_map      = {"Male": 0, "Female": 1}
+        married_map     = {"Yes": 1, "No": 0}
+        work_map        = {"Private": 0, "Self-employed": 1, "Govt_job": 2, "Never_worked": 3}
+        htn_map         = {"Yes": 1, "No": 0}
+        heart_map       = {"Yes": 1, "No": 0}
+        smoke_map       = {"never smoked": 0, "formerly smoked": 1, "smokes": 2}
 
+        # build feature vector
         features = np.array([
-            hd_map[st.session_state.heart_disease],
+            heart_map[st.session_state.heart_disease],
             htn_map[st.session_state.hypertension],
             married_map[st.session_state.ever_married],
             smoke_map[st.session_state.smoking_status],
             work_map[st.session_state.work_type],
             gender_map[st.session_state.gender],
-            age, gluc, age_sq, interaction, glu_sq
+            age_val,
+            glu_val,
+            age_sq,
+            interaction,
+            glu_sq
         ], dtype=float).reshape(1, -1)
 
-        # compute probability
+        # predict probability
         prob = model.predict_proba(features)[0][1]
 
         # save for Results.py
         st.session_state.user_data       = {
-            "age": age,
+            "age": age_val,
             "gender": st.session_state.gender,
             "ever_married": st.session_state.ever_married,
             "work_type": st.session_state.work_type,
             "hypertension": st.session_state.hypertension,
             "heart_disease": st.session_state.heart_disease,
-            "avg_glucose_level": gluc,
+            "avg_glucose_level": glu_val,
             "smoking_status": st.session_state.smoking_status
         }
         st.session_state.prediction_prob = prob
 
-        # navigate to Results.py
-        st.switch_page("Results.py")
+        # navigate to your Results page
+        st.switch_page("Results")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -172,6 +178,6 @@ st.markdown("""
         <a href='/Results'>Results</a>
         <a href='/Recommendations'>Recommendations</a>
       </p>
-      <p style="font-size:12px; margin-top:10px;">Developed by Victoria Mends</p>
+      <p style="font-size:12px;">Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
