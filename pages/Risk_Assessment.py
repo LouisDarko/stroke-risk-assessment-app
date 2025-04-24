@@ -46,7 +46,7 @@ with st.expander("👤 Personal Information", expanded=True):
     age = st.number_input(
         "Age",
         min_value=18, max_value=100,
-        value=, step=1, format="%d",
+        value=18, step=1, format="%d",
         help="Enter your age (years)",
         key="age"
     )
@@ -84,7 +84,7 @@ with st.expander("🩺 Health Information", expanded=True):
     )
     avg_glucose_level = st.number_input(
         "Average Glucose Level (mg/dL)",
-        min_value=0.0, value=0.0, step=0.1,
+        min_value=55.0, value=55.0, step=0.1,
         help="Enter your average blood glucose",
         key="avg_glucose_level"
     )
@@ -103,7 +103,7 @@ st.write(
     "By submitting, you agree to allow us to estimate your stroke risk."
 )
 st.checkbox(
-    "✅ I agree to the terms and allow risk estimation",
+    "I agree to the terms and allow risk estimation",
     key="consent"
 )
 
