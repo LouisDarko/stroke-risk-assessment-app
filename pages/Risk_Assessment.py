@@ -44,16 +44,37 @@ model = load_model()
 
 # ── Input Sections ─────────────────────────────────────────────────────────────
 with st.expander("👤 Personal Information", expanded=True):
-    age           = st.number_input("Age", min_value=0, max_value=120, value=30)
-    gender        = st.selectbox("Gender", options=["", "Male", "Female", "Other"])
-    ever_married  = st.selectbox("Ever Married?", options=["", "Yes", "No"])
-    work_type     = st.selectbox("Work Type", options=["", "Private", "Self-employed", "Govt_job", "Never_worked"])
+    age           = st.number_input(
+                        "Age",
+                        min_value=0, max_value=120,
+                        value=0, step=1, format="%d",
+                        help="Enter your age (years)")
+    gender        = st.selectbox(
+                        "Gender",
+                        options=["Select Gender", "Male", "Female", "Other"])
+    ever_married  = st.selectbox(
+                        "Ever Married?",
+                        options=["Select…", "Yes", "No"])
+    work_type     = st.selectbox(
+                        "Work Type",
+                        options=["Select Work Type", "Private", "Self-employed", "Govt_job", "Never_worked"])
 
 with st.expander("🩺 Health Information", expanded=True):
-    hypertension      = st.radio("Do you have hypertension?", options=[0,1], format_func=lambda x: "Yes" if x else "No")
-    heart_disease     = st.radio("Do you have heart disease?",   options=[0,1], format_func=lambda x: "Yes" if x else "No")
-    avg_glucose_level = st.number_input("Average Glucose Level (mg/dL)", min_value=0.0, value=100.0)
-    smoking_status    = st.selectbox("Smoking Status", options=["", "never smoked", "formerly smoked", "smokes", "Unknown"])
+    hypertension      = st.radio(
+                           "Do you have hypertension?",
+                           options=[0,1],
+                           format_func=lambda x: "Yes" if x else "No")
+    heart_disease     = st.radio(
+                           "Do you have heart disease?",
+                           options=[0,1],
+                           format_func=lambda x: "Yes" if x else "No")
+    avg_glucose_level = st.number_input(
+                           "Average Glucose Level (mg/dL)",
+                           min_value=0.0, value=0.0, step=0.1,
+                           help="Enter your average blood glucose")
+    smoking_status    = st.selectbox(
+                           "Smoking Status",
+                           options=["Select…", "never smoked", "formerly smoked", "smokes", "Unknown"])
 
 # ── Consent & Disclaimer ───────────────────────────────────────────────────────
 st.markdown("### 📄 Consent and Disclaimer")
@@ -64,14 +85,20 @@ st.write(
 )
 st.checkbox("✅ I agree to the terms and allow risk estimation", key="consent")
 
-# ── Predict on submit ───────────────────────────────────────────────────────────
+# ── Calculate & Redirect ────────────────────────────────────────────────────────
 if st.button("Calculate Stroke Risk 📈"):
-    # ensure consent
+    # validation
     if not st.session_state.consent:
         st.error("You must agree to the terms before proceeding!")
-    # ensure all selections made
-    elif "" in [gender, ever_married, work_type, smoking_status]:
-        st.error("Please complete all fields before submitting.")
+    elif (
+        age < 1
+        or avg_glucose_level <= 0
+        or gender.startswith("Select")
+        or ever_married.startswith("Select")
+        or work_type.startswith("Select")
+        or smoking_status.startswith("Select")
+    ):
+        st.error("Please complete all fields with valid values before submitting.")
     else:
         # polynomial features
         age_sq      = age ** 2
@@ -84,7 +111,7 @@ if st.button("Calculate Stroke Risk 📈"):
         work_map    = {"Private":0, "Self-employed":1, "Govt_job":2, "Never_worked":3}
         smoke_map   = {"never smoked":0, "formerly smoked":1, "smokes":2, "Unknown":3}
 
-        # build feature vector in the same order your model expects
+        # build feature vector
         features = np.array([
             heart_disease,
             hypertension,
@@ -99,10 +126,11 @@ if st.button("Calculate Stroke Risk 📈"):
             glu_sq
         ], dtype=float).reshape(1, -1)
 
+        # compute probability
         prob = model.predict_proba(features)[0][1]
 
-        # store & display
-        st.session_state.user_data = {
+        # store for Results.py
+        st.session_state.user_data       = {
             "age": age,
             "gender": gender,
             "ever_married": ever_married,
@@ -114,9 +142,9 @@ if st.button("Calculate Stroke Risk 📈"):
         }
         st.session_state.prediction_prob = prob
 
-        st.success(f"🧠 Your estimated stroke risk probability is **{prob*100:.2f}%**")
-        st.write("### 🔍 Your Inputs:")
-        st.json(st.session_state.user_data)
+        # navigate to Results.py
+        st.experimental_set_query_params(page="Results")
+        st.experimental_rerun()
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
