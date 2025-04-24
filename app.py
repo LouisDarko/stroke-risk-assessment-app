@@ -192,9 +192,6 @@ Stroke Statistics:
 - 12.2 million cases in 2020
 - 5.5 million deaths annually
 
-# Assess Your Stroke Risk
-
-# Click below to use our intelligent tool and evaluate your risk level
 """
 
 # Audio narration
