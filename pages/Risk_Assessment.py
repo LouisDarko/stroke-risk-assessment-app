@@ -42,23 +42,47 @@ model = load_model()
 
 # ── Input Sections ─────────────────────────────────────────────────────────────
 with st.expander("👤 Personal Information", expanded=True):
-    age = st.number_input("Age", min_value=18, max_value=100, value=18, step=1, format="%d", key="age")
-    gender = st.selectbox("Gender", ["", "Male", "Female"], key="gender")
-    ever_married = st.selectbox("Ever Married?", ["", "Yes", "No"], key="ever_married")
+    age = st.number_input(
+        "Age", min_value=18, max_value=100,
+        value=18, step=1, format="%d", key="age"
+    )
+    gender = st.selectbox(
+        "Gender",
+        options=["Select option", "Male", "Female"],
+        index=0, key="gender"
+    )
+    ever_married = st.selectbox(
+        "Ever Married?",
+        options=["Select option", "Yes", "No"],
+        index=0, key="ever_married"
+    )
     work_type = st.selectbox(
         "Work Type",
-        ["", "Private", "Self-employed", "Govt_job", "Never_worked"],
-        key="work_type"
+        options=["Select option", "Private", "Self-employed", "Govt_job", "Never_worked"],
+        index=0, key="work_type"
     )
 
 with st.expander("🩺 Health Information", expanded=True):
-    hypertension = st.radio("Do you have hypertension?", ["", "Yes", "No"], key="hypertension")
-    heart_disease = st.radio("Do you have heart disease?", ["", "Yes", "No"], key="heart_disease")
+    hypertension = st.radio(
+        "Do you have hypertension?",
+        options=["Select option", "Yes", "No"],
+        index=0, key="hypertension"
+    )
+    heart_disease = st.radio(
+        "Do you have heart disease?",
+        options=["Select option", "Yes", "No"],
+        index=0, key="heart_disease"
+    )
     avg_glucose_level = st.number_input(
         "Average Glucose Level (mg/dL)",
-        min_value=55.0, value=55.0, step=0.1, key="avg_glucose_level"
+        min_value=55.0, value=55.0, step=0.1,
+        key="avg_glucose_level"
     )
-    smoking_status = st.selectbox("Smoking Status", ["", "never smoked", "formerly smoked", "smokes"], key="smoking_status")
+    smoking_status = st.selectbox(
+        "Smoking Status",
+        options=["Select option", "never smoked", "formerly smoked", "smokes"],
+        index=0, key="smoking_status"
+    )
 
 # ── Consent & Disclaimer ───────────────────────────────────────────────────────
 st.markdown("### 📄 Consent and Disclaimer")
@@ -75,31 +99,30 @@ if st.button("Calculate Stroke Risk 📈"):
     if not st.session_state.consent:
         st.error("You must agree to the terms before proceeding!")
     elif (
-        st.session_state.gender == ""
-        or st.session_state.ever_married == ""
-        or st.session_state.work_type == ""
-        or st.session_state.hypertension == ""
-        or st.session_state.heart_disease == ""
-        or st.session_state.smoking_status == ""
-        or st.session_state.age < 18
-        or st.session_state.avg_glucose_level <= 0
+        st.session_state.gender == "Select option" or
+        st.session_state.ever_married == "Select option" or
+        st.session_state.work_type == "Select option" or
+        st.session_state.hypertension == "Select option" or
+        st.session_state.heart_disease == "Select option" or
+        st.session_state.smoking_status == "Select option" or
+        st.session_state.age < 18 or
+        st.session_state.avg_glucose_level <= 0
     ):
         st.error("Please complete all fields with valid values before submitting.")
     else:
-        # calculate features
-        age = st.session_state.age
-        gluc = st.session_state.avg_glucose_level
-        age_sq = age**2
-        glu_sq = gluc**2
+        # polynomial features
+        age   = st.session_state.age
+        gluc  = st.session_state.avg_glucose_level
+        age_sq, glu_sq = age**2, gluc**2
         interaction = age * gluc
 
-        # encoding
-        gender_map = {"Male": 0, "Female": 1}
+        # encoding maps
+        gender_map  = {"Male": 0, "Female": 1}
         married_map = {"Yes": 1, "No": 0}
-        work_map = {"Private": 0, "Self-employed": 1, "Govt_job": 2, "Never_worked": 3}
-        htn_map = {"Yes": 1, "No": 0}
-        hd_map = {"Yes": 1, "No": 0}
-        smoke_map = {"never smoked": 0, "formerly smoked": 1, "smokes": 2}
+        work_map    = {"Private": 0, "Self-employed": 1, "Govt_job": 2, "Never_worked": 3}
+        htn_map     = {"Yes": 1, "No": 0}
+        hd_map      = {"Yes": 1, "No": 0}
+        smoke_map   = {"never smoked": 0, "formerly smoked": 1, "smokes": 2}
 
         features = np.array([
             hd_map[st.session_state.heart_disease],
@@ -108,17 +131,14 @@ if st.button("Calculate Stroke Risk 📈"):
             smoke_map[st.session_state.smoking_status],
             work_map[st.session_state.work_type],
             gender_map[st.session_state.gender],
-            age,
-            gluc,
-            age_sq,
-            interaction,
-            glu_sq
+            age, gluc, age_sq, interaction, glu_sq
         ], dtype=float).reshape(1, -1)
 
+        # compute probability
         prob = model.predict_proba(features)[0][1]
 
-        # save state
-        st.session_state.user_data = {
+        # save for Results.py
+        st.session_state.user_data       = {
             "age": age,
             "gender": st.session_state.gender,
             "ever_married": st.session_state.ever_married,
@@ -130,12 +150,8 @@ if st.button("Calculate Stroke Risk 📈"):
         }
         st.session_state.prediction_prob = prob
 
-        # JS redirect
-        st.markdown(
-            "<script>window.location.href = '/Results';</script>",
-            unsafe_allow_html=True
-        )
-        st.stop()
+        # navigate to Results.py
+        st.switch_page("pages/Results.py")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -149,13 +165,13 @@ st.markdown("""
     .custom-footer a:hover { text-decoration: underline; }
   </style>
   <div class="custom-footer">
-    <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
-    <p>
-      <a href='/Home'>Home</a>
-      <a href='/Risk_Assessment'>Risk Assessment</a>
-      <a href='/Results'>Results</a>
-      <a href='/Recommendations'>Recommendations</a>
-    </p>
-    <p style="font-size:12px; margin-top:10px;">Developed by Victoria Mends</p>
+      <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
+      <p>
+        <a href='/Home'>Home</a>
+        <a href='/Risk_Assessment'>Risk Assessment</a>
+        <a href='/Results'>Results</a>
+        <a href='/Recommendations'>Recommendations</a>
+      </p>
+      <p style="font-size:12px; margin-top:10px;">Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
