@@ -45,14 +45,14 @@ model = load_model()
 with st.expander("👤 Personal Information", expanded=True):
     age = st.number_input(
         "Age",
-        min_value=0, max_value=120,
-        value=0, step=1, format="%d",
+        min_value=18, max_value=100,
+        value=, step=1, format="%d",
         help="Enter your age (years)",
         key="age"
     )
     gender = st.selectbox(
         "Gender",
-        options=["Select…", "Male", "Female", "Other"],
+        options=["Select…", "Male", "Female"],
         index=0,
         key="gender"
     )
@@ -70,13 +70,13 @@ with st.expander("👤 Personal Information", expanded=True):
     )
 
 with st.expander("🩺 Health Information", expanded=True):
-    hypertension = st.selectbox(
+    hypertension = st.radio(
         "Do you have hypertension?",
         options=["Select…", "Yes", "No"],
         index=0,
         key="hypertension"
     )
-    heart_disease = st.selectbox(
+    heart_disease = st.radio(
         "Do you have heart disease?",
         options=["Select…", "Yes", "No"],
         index=0,
@@ -90,7 +90,7 @@ with st.expander("🩺 Health Information", expanded=True):
     )
     smoking_status = st.selectbox(
         "Smoking Status",
-        options=["Select…", "never smoked", "formerly smoked", "smokes", "Unknown"],
+        options=["Select…", "never smoked", "formerly smoked", "smokes"],
         index=0,
         key="smoking_status"
     )
@@ -125,19 +125,19 @@ if st.button("Calculate Stroke Risk 📈"):
         st.error("Please complete all fields with valid values before submitting.")
     else:
         # polynomial features
-        age        = st.session_state.age
-        gluc       = st.session_state.avg_glucose_level
-        age_sq     = age ** 2
-        glu_sq     = gluc ** 2
-        interaction= age * gluc
+        age    = st.session_state.age
+        gluc   = st.session_state.avg_glucose_level
+        age_sq = age ** 2
+        glu_sq = gluc ** 2
+        interact = age * gluc
 
         # encoding maps
-        gender_map       = {"Male":0, "Female":1, "Other":2}
+        gender_map       = {"Male":0, "Female":1}
         married_map      = {"Yes":1, "No":0}
         work_map         = {"Private":0, "Self-employed":1, "Govt_job":2, "Never_worked":3}
         hypertension_map = {"Yes":1, "No":0}
         heart_map        = {"Yes":1, "No":0}
-        smoke_map        = {"never smoked":0, "formerly smoked":1, "smokes":2, "Unknown":3}
+        smoke_map        = {"never smoked":0, "formerly smoked":1, "smokes":2}
 
         # build feature vector
         features = np.array([
@@ -150,7 +150,7 @@ if st.button("Calculate Stroke Risk 📈"):
             age,
             gluc,
             age_sq,
-            interaction,
+            interact,
             glu_sq
         ], dtype=float).reshape(1, -1)
 
