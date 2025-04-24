@@ -83,7 +83,7 @@ st.write(
     "It is not a diagnostic tool and should not replace professional medical advice. "
     "By submitting, you agree to allow us to estimate your stroke risk."
 )
-st.checkbox("✅ I agree to the terms and allow risk estimation", key="consent")
+st.checkbox("I agree to the terms and allow risk estimation", key="consent")
 
 # ── Calculate & Redirect ────────────────────────────────────────────────────────
 if st.button("Calculate Stroke Risk 📈"):
