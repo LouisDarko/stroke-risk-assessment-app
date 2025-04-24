@@ -20,8 +20,8 @@ encoded_image2 = get_base64_image("image3.png")           # second new slide
 st.markdown("""
     <style>
         #MainMenu, footer, header {visibility: hidden;}
-        [data-testid=\"stSidebar\"] {display: none;}
-        [data-testid=\"collapsedControl\"] {display: none;}
+        [data-testid="stSidebar"] {display: none;}
+        [data-testid="collapsedControl"] {display: none;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -64,7 +64,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# Hero Banner Section with CSS Slideshow
+# Hero Banner Section with CSS Slideshow (contain)
 st.markdown(f"""
     <style>
         .hero-banner {{
@@ -74,6 +74,7 @@ st.markdown(f"""
             border-radius: 15px;
             overflow: hidden;
             margin-bottom: 30px;
+            background-color: #000; /* letterbox background */
         }}
         .hero-banner .slides {{
             position: relative;
@@ -82,10 +83,12 @@ st.markdown(f"""
         }}
         .hero-banner .slides img {{
             position: absolute;
-            top: 0; left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
             opacity: 0;
             animation: slideAnim 12s infinite;
         }}
@@ -94,9 +97,9 @@ st.markdown(f"""
         .hero-banner .slides img:nth-child(3) {{ animation-delay: 8s; }}
 
         @keyframes slideAnim {{
-            0%   {{ opacity: 1; }}
-            33.33%  {{ opacity: 1; }}
-            33.34%  {{ opacity: 0; }}
+            0% {{ opacity: 1; }}
+            33.33% {{ opacity: 1; }}
+            33.34% {{ opacity: 0; }}
             100% {{ opacity: 0; }}
         }}
 
@@ -110,7 +113,7 @@ st.markdown(f"""
             border-radius: 10px;
         }}
         .hero-text-overlay h2 {{ margin: 0; font-size: 28px; }}
-        .hero-text-overlay p  {{ margin-top: 5px; font-size: 16px; }}
+        .hero-text-overlay p {{ margin-top: 5px; font-size: 16px; }}
     </style>
 
     <div class="hero-banner">
@@ -266,11 +269,7 @@ st.markdown("""
     <div style='background-color:#e6f2ff; padding:30px; border-radius:12px; text-align:center; margin-top:30px;'>
         <h4>📝 Assess Your Stroke Risk</h4>
         <p>Click below to use our intelligent tool and evaluate your risk level.</p>
-        <a href='/Risk_Assessment' target='_self'>
-            <button style='background-color:#4C9D70; color:white; padding:12px 24px; font-size:16px; border:none; border-radius:8px; cursor:pointer; transition:all 0.3s ease;'>
-                ➡️ Start Risk Assessment
-            </button>
-        </a>
+        <a href='/Risk_Assessment' target='_self'><button style='background-color:#4C9D70; color:white; padding:12px 24px; font-size:16px; border:none; border-radius:8px; cursor:pointer; transition:all 0.3s ease;'>➡️ Start Risk Assessment</button></a>
     </div>
     <style>
     button:hover {
