@@ -92,7 +92,7 @@ st.markdown("""
 @st.cache_resource
 def load_model():
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.join(script_dir, "model_compressed.pkl")
+    model_path = os.path.join(script_dir, "best_gb_model.pkl")
     return joblib.load(model_path)
 
 model = load_model()
