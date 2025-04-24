@@ -51,30 +51,34 @@ with st.expander("👤 Personal Information", expanded=True):
                         help="Enter your age (years)")
     gender        = st.selectbox(
                         "Gender",
-                        options=["Select Gender", "Male", "Female", "Other"])
+                        options=["", "Male", "Female", "Other"],
+                        index=0)
     ever_married  = st.selectbox(
                         "Ever Married?",
-                        options=["Select…", "Yes", "No"])
+                        options=["", "Yes", "No"],
+                        index=0)
     work_type     = st.selectbox(
                         "Work Type",
-                        options=["Select Work Type", "Private", "Self-employed", "Govt_job", "Never_worked"])
+                        options=["", "Private", "Self-employed", "Govt_job", "Never_worked"],
+                        index=0)
 
 with st.expander("🩺 Health Information", expanded=True):
-    hypertension      = st.radio(
+    hypertension      = st.selectbox(
                            "Do you have hypertension?",
-                           options=[0,1],
-                           format_func=lambda x: "Yes" if x else "No")
-    heart_disease     = st.radio(
+                           options=["", "Yes", "No"],
+                           index=0)
+    heart_disease     = st.selectbox(
                            "Do you have heart disease?",
-                           options=[0,1],
-                           format_func=lambda x: "Yes" if x else "No")
+                           options=["", "Yes", "No"],
+                           index=0)
     avg_glucose_level = st.number_input(
                            "Average Glucose Level (mg/dL)",
                            min_value=0.0, value=0.0, step=0.1,
                            help="Enter your average blood glucose")
     smoking_status    = st.selectbox(
                            "Smoking Status",
-                           options=["Select…", "never smoked", "formerly smoked", "smokes", "Unknown"])
+                           options=["", "never smoked", "formerly smoked", "smokes", "Unknown"],
+                           index=0)
 
 # ── Consent & Disclaimer ───────────────────────────────────────────────────────
 st.markdown("### 📄 Consent and Disclaimer")
@@ -83,7 +87,7 @@ st.write(
     "It is not a diagnostic tool and should not replace professional medical advice. "
     "By submitting, you agree to allow us to estimate your stroke risk."
 )
-st.checkbox("I agree to the terms and allow risk estimation", key="consent")
+st.checkbox("✅ I agree to the terms and allow risk estimation", key="consent")
 
 # ── Calculate & Redirect ────────────────────────────────────────────────────────
 if st.button("Calculate Stroke Risk 📈"):
@@ -93,10 +97,12 @@ if st.button("Calculate Stroke Risk 📈"):
     elif (
         age < 1
         or avg_glucose_level <= 0
-        or gender.startswith("Select")
-        or ever_married.startswith("Select")
-        or work_type.startswith("Select")
-        or smoking_status.startswith("Select")
+        or not gender
+        or not ever_married
+        or not work_type
+        or not hypertension
+        or not heart_disease
+        or not smoking_status
     ):
         st.error("Please complete all fields with valid values before submitting.")
     else:
@@ -106,15 +112,17 @@ if st.button("Calculate Stroke Risk 📈"):
         interaction = age * avg_glucose_level
 
         # encoding maps
-        gender_map  = {"Male":0, "Female":1, "Other":2}
-        married_map = {"Yes":1, "No":0}
-        work_map    = {"Private":0, "Self-employed":1, "Govt_job":2, "Never_worked":3}
-        smoke_map   = {"never smoked":0, "formerly smoked":1, "smokes":2, "Unknown":3}
+        gender_map      = {"Male":0, "Female":1, "Other":2}
+        married_map     = {"Yes":1, "No":0}
+        work_map        = {"Private":0, "Self-employed":1, "Govt_job":2, "Never_worked":3}
+        hypertension_map= {"Yes":1, "No":0}
+        heart_map       = {"Yes":1, "No":0}
+        smoke_map       = {"never smoked":0, "formerly smoked":1, "smokes":2, "Unknown":3}
 
         # build feature vector
         features = np.array([
-            heart_disease,
-            hypertension,
+            heart_map[heart_disease],
+            hypertension_map[hypertension],
             married_map[ever_married],
             smoke_map[smoking_status],
             work_map[work_type],
@@ -135,16 +143,15 @@ if st.button("Calculate Stroke Risk 📈"):
             "gender": gender,
             "ever_married": ever_married,
             "work_type": work_type,
-            "hypertension": "Yes" if hypertension else "No",
-            "heart_disease": "Yes" if heart_disease else "No",
+            "hypertension": hypertension,
+            "heart_disease": heart_disease,
             "avg_glucose_level": avg_glucose_level,
             "smoking_status": smoking_status
         }
         st.session_state.prediction_prob = prob
 
-        # navigate to Results.py
-        st.experimental_set_query_params(page="Results")
-        st.experimental_rerun()
+        # set query param to navigate to Results.py
+        st.query_params = {"page": "Results"}
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
