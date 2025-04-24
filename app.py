@@ -2,6 +2,9 @@ import streamlit as st
 from gtts import gTTS
 import base64
 
+# Set page configuration
+st.set_page_config(page_title="Stroke Risk Prediction", layout="wide")
+
 # Encode image as Base64
 def get_base64_image(image_path):
     with open(image_path, "rb") as img_file:
@@ -13,8 +16,7 @@ encoded_image0 = get_base64_image("strokeprediction.png")  # original hero
 encoded_image1 = get_base64_image("image2.png")          # first new slide
 encoded_image2 = get_base64_image("image3.png")          # second new slide
 
-# Set page configuration
-st.set_page_config(page_title="Stroke Risk Prediction", layout="wide")
+
 
 # Hide Streamlit default elements and sidebar
 st.markdown("""
