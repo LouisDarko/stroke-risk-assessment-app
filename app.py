@@ -70,7 +70,7 @@ st.markdown(f"""
     .hero-banner {{
         position: relative;
         width: 100%;
-        height: 700px;
+        height: 650px;
         border-radius: 15px;
         overflow: hidden;
         margin-bottom: 30px;
