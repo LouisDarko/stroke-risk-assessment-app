@@ -125,6 +125,18 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# Call to Action
+st.markdown("""
+<div style='background-color:#e6f2ff; padding:30px; border-radius:12px; text-align:center; margin-top:30px;'>
+    <h4>📝 Assess Your Stroke Risk</h4>
+    <p>Click below to use our intelligent tool and evaluate your risk level.</p>
+    <a href='/Risk_Assessment' target='_self'><button style='background-color:#4C9D70; color:white; padding:12px 24px; font-size:16px; border:none; border-radius:8px; cursor:pointer; transition:all 0.3s ease;'>➡️ Start Risk Assessment</button></a>
+</div>
+<style>
+button:hover { background-color:#3e8e41; transform:scale(1.05); }
+</style>
+""", unsafe_allow_html=True)
+
 # Intro section
 st.title("🧠 Learn About Stroke")
 st.markdown("""
@@ -136,6 +148,10 @@ preventing brain tissue from getting oxygen and nutrients. Early detection can s
 
 # Narration text
 full_page_text = """
+Assess Your Stroke Risk
+
+Click below to use our intelligent tool and evaluate your risk level
+
 Learn About Stroke
 
 A stroke happens when the blood supply to part of your brain is interrupted or reduced,
@@ -176,9 +192,9 @@ Stroke Statistics:
 - 12.2 million cases in 2020
 - 5.5 million deaths annually
 
-Assess Your Stroke Risk
+# Assess Your Stroke Risk
 
-Click below to use our intelligent tool and evaluate your risk level
+# Click below to use our intelligent tool and evaluate your risk level
 """
 
 # Audio narration
@@ -260,17 +276,17 @@ with col2:
     </ul>
     """)
 
-# Call to Action
-st.markdown("""
-<div style='background-color:#e6f2ff; padding:30px; border-radius:12px; text-align:center; margin-top:30px;'>
-    <h4>📝 Assess Your Stroke Risk</h4>
-    <p>Click below to use our intelligent tool and evaluate your risk level.</p>
-    <a href='/Risk_Assessment' target='_self'><button style='background-color:#4C9D70; color:white; padding:12px 24px; font-size:16px; border:none; border-radius:8px; cursor:pointer; transition:all 0.3s ease;'>➡️ Start Risk Assessment</button></a>
-</div>
-<style>
-button:hover { background-color:#3e8e41; transform:scale(1.05); }
-</style>
-""", unsafe_allow_html=True)
+# # Call to Action
+# st.markdown("""
+# <div style='background-color:#e6f2ff; padding:30px; border-radius:12px; text-align:center; margin-top:30px;'>
+#     <h4>📝 Assess Your Stroke Risk</h4>
+#     <p>Click below to use our intelligent tool and evaluate your risk level.</p>
+#     <a href='/Risk_Assessment' target='_self'><button style='background-color:#4C9D70; color:white; padding:12px 24px; font-size:16px; border:none; border-radius:8px; cursor:pointer; transition:all 0.3s ease;'>➡️ Start Risk Assessment</button></a>
+# </div>
+# <style>
+# button:hover { background-color:#3e8e41; transform:scale(1.05); }
+# </style>
+# """, unsafe_allow_html=True)
 
 # Footer
 st.markdown("""
