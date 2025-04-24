@@ -135,7 +135,8 @@ preventing brain tissue from getting oxygen and nutrients. Early detection can s
 </p>
 """, unsafe_allow_html=True)
 
-# Full page text for narration\ nfull_page_text = """
+# Full page text for narration
+full_page_text = """
 Learn About Stroke
 
 A stroke happens when the blood supply to part of your brain is interrupted or reduced,
@@ -182,20 +183,20 @@ Click below to use our intelligent tool and evaluate your risk level
 """
 
 # Generate audio narration
- def generate_audio(text, filename="full_page.mp3"):
+def generate_audio(text, filename="full_page.mp3"):
     tts = gTTS(text, lang='en')
     tts.save(filename)
     with open(filename, "rb") as f:
         audio_data = f.read()
         b64_audio = base64.b64encode(audio_data).decode()
-        audio_html = f"""
-            <audio controls style="width: 100%; margin-top: 20px;">
-                <source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3">
-                Your browser does not support the audio element.
-            </audio>
-        """
-        st.markdown("### 🔊 Listen to this page")
-        st.markdown(audio_html, unsafe_allow_html=True)
+    audio_html = f"""
+        <audio controls style="width: 100%; margin-top: 20px;">
+            <source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3">
+            Your browser does not support the audio element.
+        </audio>
+    """
+    st.markdown("### 🔊 Listen to this page")
+    st.markdown(audio_html, unsafe_allow_html=True)
 
 generate_audio(full_page_text)
 
@@ -279,7 +280,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Custom Footer with Developer Credit and Transparent Background
+# Custom Footer
 st.markdown("""
     <style>
         .custom-footer {
