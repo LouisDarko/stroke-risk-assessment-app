@@ -6,7 +6,7 @@ import numpy as np
 
 # ── Page config & hide defaults ────────────────────────────────────────────────
 st.set_page_config(page_title="Stroke Risk Assessment", layout="wide")
-st.write("Scikit-learn version:", sklearn.__version__)
+
 st.markdown("""
     <style>
       #MainMenu, footer, header {visibility: hidden;}
