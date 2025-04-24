@@ -2,22 +2,19 @@ import streamlit as st
 from gtts import gTTS
 import base64
 
-
 # Encode image as Base64
 def get_base64_image(image_path):
     with open(image_path, "rb") as img_file:
         b64_encoded = base64.b64encode(img_file.read()).decode()
         return f"data:image/png;base64,{b64_encoded}"
 
-# Get Base64 image string
-encoded_image = get_base64_image("strokeprediction.png")
+# Get Base64 image strings
+encoded_image0 = get_base64_image("strokeprediction.png")  # original hero
+encoded_image1 = get_base64_image("image 3.png")          # first new slide
+encoded_image2 = get_base64_image("image 2.png")          # second new slide
 
 # Set page configuration
 st.set_page_config(page_title="Stroke Risk Prediction", layout="wide")
-
-
-
-
 
 # Hide Streamlit default elements and sidebar
 st.markdown("""
@@ -31,7 +28,7 @@ st.markdown("""
 # Custom Header
 st.markdown("""
     <div style="background-color: #4C9D70; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-        <h1 style="color: white; text-align: center; margin: 0;">\U0001F9E0 Stroke Risk Assessment Tool</h1>
+        <h1 style="color: white; text-align: center; margin: 0;">🧠 Stroke Risk Assessment Tool</h1>
         <p style="color: white; text-align: center; font-size: 18px;">Empowering you to take control of your brain health</p>
     </div>
 """, unsafe_allow_html=True)
@@ -67,7 +64,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# Hero Banner Section
+# Hero Banner Section with CSS Slideshow
 st.markdown(f"""
     <style>
         .hero-banner {{
@@ -76,24 +73,25 @@ st.markdown(f"""
             border-radius: 15px;
             overflow: hidden;
             margin-bottom: 30px;
-            animation: fadeIn 2s ease-in-out;
         }}
-
-        .hero-banner img {{
+        .hero-banner .slides img {{
+            position: absolute;
+            top: 0; left: 0;
             width: 100%;
             height: auto;
             object-fit: cover;
-            opacity: 0.95;
-            transition: transform 1s ease;
+            opacity: 0;
+            animation: slideAnim 12s infinite;
         }}
+        .hero-banner .slides img:nth-child(1) {{ animation-delay: 0s;  }}
+        .hero-banner .slides img:nth-child(2) {{ animation-delay: 4s;  }}
+        .hero-banner .slides img:nth-child(3) {{ animation-delay: 8s;  }}
 
-        .hero-banner:hover img {{
-            transform: scale(1.02);
-        }}
-
-        @keyframes fadeIn {{
-            from {{ opacity: 0; }}
-            to {{ opacity: 1; }}
+        @keyframes slideAnim {{
+            0%   {{ opacity: 1; }}
+            33.33%  {{ opacity: 1; }}
+            33.34%  {{ opacity: 0; }}
+            100% {{ opacity: 0; }}
         }}
 
         .hero-text-overlay {{
@@ -105,20 +103,16 @@ st.markdown(f"""
             padding: 20px;
             border-radius: 10px;
         }}
-
-        .hero-text-overlay h2 {{
-            margin: 0;
-            font-size: 28px;
-        }}
-
-        .hero-text-overlay p {{
-            margin-top: 5px;
-            font-size: 16px;
-        }}
+        .hero-text-overlay h2 {{ margin: 0; font-size: 28px; }}
+        .hero-text-overlay p  {{ margin-top: 5px; font-size: 16px; }}
     </style>
 
     <div class="hero-banner">
-        <img src="{encoded_image}" alt="Stroke Prediction Hero Banner">
+        <div class="slides">
+            <img src="{encoded_image0}" alt="Original Hero">
+            <img src="{encoded_image1}" alt="Slide 1">
+            <img src="{encoded_image2}" alt="Slide 2">
+        </div>
         <div class="hero-text-overlay">
             <h2>Early Detection Saves Lives</h2>
             <p>Explore stroke prevention strategies with our intelligent tool</p>
@@ -127,7 +121,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # Intro section
-st.title("\U0001F9E0 Learn About Stroke")
+st.title("🧠 Learn About Stroke")
 st.markdown("""
 <p style='font-size:18px;'>
 A stroke happens when the blood supply to part of your brain is interrupted or reduced, 
@@ -194,7 +188,7 @@ def generate_audio(text, filename="full_page.mp3"):
                 Your browser does not support the audio element.
             </audio>
         """
-        st.markdown("### \U0001F50A Listen to this page")
+        st.markdown("### 🔊 Listen to this page")
         st.markdown(audio_html, unsafe_allow_html=True)
 
 generate_audio(full_page_text)
@@ -211,7 +205,7 @@ def info_card(icon, title, content):
 col1, col2 = st.columns(2)
 
 with col1:
-    info_card("\U0001F9E9", "Types of Stroke", """
+    info_card("🧩", "Types of Stroke", """
     <ul>
         <li><strong>Ischemic:</strong> Blockage in brain arteries.</li>
         <li><strong>Hemorrhagic:</strong> Burst blood vessels in the brain.</li>
@@ -227,7 +221,7 @@ with col1:
         <li>Obesity and cholesterol</li>
     </ul>
     """)
-    info_card("\U0001FA7A", "Prevention", """
+    info_card("🏃", "Prevention", """
     <ul>
         <li>Control blood pressure & sugar</li>
         <li>Exercise regularly</li>
@@ -237,7 +231,7 @@ with col1:
     """)
 
 with col2:
-    info_card("\u26A0\uFE0F", "Symptoms", """
+    info_card("⚠️", "Symptoms", """
     <ul>
         <li>Sudden numbness or weakness (face, arm, leg)</li>
         <li>Confusion, speech trouble</li>
@@ -245,7 +239,7 @@ with col2:
         <li>Dizziness or balance issues</li>
     </ul>
     """)
-    info_card("\u23F1\uFE0F", "Recognize a Stroke (FAST)", """
+    info_card("⏱️", "Recognize a Stroke (FAST)", """
     <strong>Use the FAST test:</strong>
     <ul>
         <li><strong>F:</strong> Face drooping</li>
@@ -254,7 +248,7 @@ with col2:
         <li><strong>T:</strong> Time to call emergency</li>
     </ul>
     """)
-    info_card("\U0001F4CA", "Stroke Statistics", """
+    info_card("📊", "Stroke Statistics", """
     <ul>
         <li>2nd leading cause of death globally</li>
         <li>12.2 million cases in 2020</li>
@@ -265,7 +259,7 @@ with col2:
 # Call to Action Section
 st.markdown("""
     <div style='background-color:#e6f2ff; padding:30px; border-radius:12px; text-align:center; margin-top:30px;'>
-        <h4>\U0001F4DD Assess Your Stroke Risk</h4>
+        <h4>📝 Assess Your Stroke Risk</h4>
         <p>Click below to use our intelligent tool and evaluate your risk level.</p>
         <a href='/Risk_Assessment' target='_self'>
             <button style='background-color:#4C9D70; color:white; padding:12px 24px; font-size:16px; border:none; border-radius:8px; cursor:pointer; transition:all 0.3s ease;'>
@@ -280,7 +274,6 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-
 
 # Custom Footer with Developer Credit and Transparent Background
 st.markdown("""
