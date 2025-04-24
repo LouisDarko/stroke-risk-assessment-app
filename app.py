@@ -10,8 +10,8 @@ def get_base64_image(image_path):
 
 # Get Base64 image strings
 encoded_image0 = get_base64_image("strokeprediction.png")  # original hero
-encoded_image1 = get_base64_image("image3.png")          # first new slide
-encoded_image2 = get_base64_image("image2.png")          # second new slide
+encoded_image1 = get_base64_image("image2.png")          # first new slide
+encoded_image2 = get_base64_image("image3.png")          # second new slide
 
 # Set page configuration
 st.set_page_config(page_title="Stroke Risk Prediction", layout="wide")
