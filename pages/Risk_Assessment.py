@@ -45,14 +45,14 @@ model = load_model()
 with st.expander("👤 Personal Information", expanded=True):
     age = st.number_input(
         "Age",
-        min_value=18, max_value=100,
+        min_value=0, max_value=120,
         value=0, step=1, format="%d",
         help="Enter your age (years)",
         key="age"
     )
     gender = st.selectbox(
         "Gender",
-        options=["Select…", "Male", "Female"],
+        options=["Select…", "Male", "Female", "Other"],
         index=0,
         key="gender"
     )
@@ -90,7 +90,7 @@ with st.expander("🩺 Health Information", expanded=True):
     )
     smoking_status = st.selectbox(
         "Smoking Status",
-        options=["Select…", "never smoked", "formerly smoked", "smokes"],
+        options=["Select…", "never smoked", "formerly smoked", "smokes", "Unknown"],
         index=0,
         key="smoking_status"
     )
@@ -103,7 +103,7 @@ st.write(
     "By submitting, you agree to allow us to estimate your stroke risk."
 )
 st.checkbox(
-    "I agree to the terms and allow risk estimation",
+    "✅ I agree to the terms and allow risk estimation",
     key="consent"
 )
 
@@ -132,12 +132,12 @@ if st.button("Calculate Stroke Risk 📈"):
         interaction= age * gluc
 
         # encoding maps
-        gender_map       = {"Male":0, "Female":1}
+        gender_map       = {"Male":0, "Female":1, "Other":2}
         married_map      = {"Yes":1, "No":0}
         work_map         = {"Private":0, "Self-employed":1, "Govt_job":2, "Never_worked":3}
         hypertension_map = {"Yes":1, "No":0}
         heart_map        = {"Yes":1, "No":0}
-        smoke_map        = {"never smoked":0, "formerly smoked":1, "smokes":2}
+        smoke_map        = {"never smoked":0, "formerly smoked":1, "smokes":2, "Unknown":3}
 
         # build feature vector
         features = np.array([
