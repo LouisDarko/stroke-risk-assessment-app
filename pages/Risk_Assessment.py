@@ -66,17 +66,17 @@ with st.expander("👤 Personal Information", expanded=True):
 
 # ── Health Information ────────────────────────────────────────────────────────
 with st.expander("🩺 Health Information", expanded=True):
-    hypertension = st.selectbox(
+    hypertension = st.radio(
         "Hypertension?", [None, "Yes", "No"], index=0,
         format_func=lambda x: "Select Hypertension Status" if x is None else x,
         key="hypertension"
     )
-    heart_disease = st.selectbox(
+    heart_disease = st.radio(
         "Heart Disease?", [None, "Yes", "No"], index=0,
         format_func=lambda x: "Select Heart Disease Status" if x is None else x,
         key="heart_disease"
     )
-    avg_glucose = st.number_input("Average Glucose Level (mg/dL)", min_value=0.0, step=0.1, key="avg_glucose_level")
+    avg_glucose = st.number_input("Average Glucose Level (mg/dL)", min_value=55.0, step=0.1, key="avg_glucose_level")
     smoking_status = st.selectbox(
         "Smoking Status", [None, "never smoked", "formerly smoked", "smokes"], index=0,
         format_func=lambda x: "Select Smoking Status" if x is None else x,
