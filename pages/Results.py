@@ -1,164 +1,162 @@
 import streamlit as st
-import joblib
+import matplotlib.pyplot as plt
 import numpy as np
 import os
+import joblib
 
-# ── Page config & styling ─────────────────────────────────────────────────────
-st.set_page_config(page_title="Stroke Risk Assessment", layout="wide")
+# ── Page title & layout ───────────────────────────────────────────────────────
+st.set_page_config(page_title="Stroke Risk Results", layout="wide")
 st.markdown("""
-<style>
-  #MainMenu, footer, header {visibility: hidden;}
-  [data-testid="stSidebar"], [data-testid="collapsedControl"] {display: none;}
-</style>
+    <style>
+        #MainMenu, footer, header {visibility: hidden;}
+        [data-testid="stSidebar"], [data-testid="collapsedControl"] {display: none;}
+    </style>
 """, unsafe_allow_html=True)
 
-st.title("📝 Stroke Risk Assessment")
+st.title("📊 Stroke Risk Results")
 
-# ── Navbar ────────────────────────────────────────────────────────────────────
+# ── Navbar ─────────────────────────────────────────────────────────────────────
 st.markdown("""
-<style>
-  .custom-nav {
-    background: #e8f5e9; padding: 15px 0; border-radius: 10px;
-    display: flex; justify-content: center; gap: 60px; margin-bottom: 30px;
-    font-size: 18px; font-weight: 600;
-  }
-  .custom-nav a { text-decoration: none; color: #4C9D70; }
-  .custom-nav a:hover { color: #388e3c; text-decoration: underline; }
-</style>
-<div class="custom-nav">
-  <a href='/Home'>Home</a>
-  <a href='/Risk_Assessment'>Risk Assessment</a>
-  <a href='/Results'>Results</a>
-  <a href='/Recommendations'>Recommendations</a>
-</div>
+    <style>
+        .custom-nav {
+            background-color: #e8f5e9;
+            padding: 15px 0;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            margin-bottom: 30px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .custom-nav a {
+            text-decoration: none;
+            color: #4C9D70;
+        }
+        .custom-nav a:hover {
+            color: #388e3c;
+            text-decoration: underline;
+        }
+    </style>
+    <div class="custom-nav">
+        <a href='/Home'>Home</a>
+        <a href='/Risk_Assessment'>Risk Assessment</a>
+        <a href='/Results'>Results</a>
+        <a href='/Recommendations'>Recommendations</a>
+    </div>
 """, unsafe_allow_html=True)
 
-# ── Load model ─────────────────────────────────────────────────────────────────
+# ── Load trained model for feature-importances ─────────────────────────────────
 @st.cache_resource
 def load_model():
-    root_dir = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.join(root_dir, "best_gb_model.pkl")
+    pages_dir = os.path.dirname(os.path.abspath(__file__))
+    model_path = os.path.join(pages_dir, "best_gb_model.pkl")
     if not os.path.exists(model_path):
-        st.error(f"⚠️ Cannot load model at {model_path}")
+        st.error(f"⚠️ Model file not found at:\n`{model_path}`")
         st.stop()
     return joblib.load(model_path)
 
 model = load_model()
 
-# ── Personal Information ─────────────────────────────────────────────────────
-with st.expander("👤 Personal Information", expanded=True):
-    age = st.number_input("Age", min_value=18, max_value=100, step=1, key="age")
-    gender = st.selectbox(
-        "Gender", [None, "Male", "Female"], index=0,
-        format_func=lambda x: "Select Gender" if x is None else x,
-        key="gender"
-    )
-    ever_married = st.selectbox(
-        "Ever Married?", [None, "Yes", "No"], index=0,
-        format_func=lambda x: "Select Marital Status" if x is None else x,
-        key="ever_married"
-    )
-    work_type = st.selectbox(
-        "Work Type", [None, "Private", "Self-employed", "Govt_job", "Never_worked"], index=0,
-        format_func=lambda x: "Select Work Type" if x is None else x,
-        key="work_type"
-    )
+# ── Display results ────────────────────────────────────────────────────────────
+if 'user_data' in st.session_state and 'prediction_prob' in st.session_state:
+    prediction_prob = st.session_state.prediction_prob
 
-# ── Health Information ────────────────────────────────────────────────────────
-with st.expander("🩺 Health Information", expanded=True):
-    hypertension = st.selectbox(
-        "Hypertension?", [None, "Yes", "No"], index=0,
-        format_func=lambda x: "Select Hypertension Status" if x is None else x,
-        key="hypertension"
-    )
-    heart_disease = st.selectbox(
-        "Heart Disease?", [None, "Yes", "No"], index=0,
-        format_func=lambda x: "Select Heart Disease Status" if x is None else x,
-        key="heart_disease"
-    )
-    avg_glucose = st.number_input("Average Glucose Level (mg/dL)", min_value=0.0, step=0.1, key="avg_glucose_level")
-    smoking_status = st.selectbox(
-        "Smoking Status", [None, "never smoked", "formerly smoked", "smokes"], index=0,
-        format_func=lambda x: "Select Smoking Status" if x is None else x,
-        key="smoking_status"
-    )
+    st.header("🧠 Stroke Risk Probability")
+    st.write(f"Based on your input data, your risk of developing stroke is **{prediction_prob*100:.2f}%**")
 
-# ── Consent ───────────────────────────────────────────────────────────────────
-st.markdown("### 📄 Consent and Disclaimer")
-consent = st.checkbox("I agree to have my data used for stroke risk estimation.", key="consent")
-
-# ── Calculate & Navigate ──────────────────────────────────────────────────────
-if st.button("Calculate Stroke Risk 📈"):
-    # Validation checks
-    missing = []
-    if not consent:
-        st.error("You must agree to the terms before proceeding.")
-        st.stop()
-    for field, value in [
-        ("Gender", gender), ("Marital Status", ever_married), ("Work Type", work_type),
-        ("Hypertension", hypertension), ("Heart Disease", heart_disease), ("Smoking Status", smoking_status)
-    ]:
-        if value is None:
-            missing.append(field)
-    if missing or age < 18 or avg_glucose <= 0:
-        st.error(f"Please complete all fields: {', '.join(missing)} and ensure age ≥ 18, glucose > 0.")
+    if prediction_prob > 0.5:
+        st.warning("⚠️ Higher Risk of Stroke Detected")
     else:
-        # Feature engineering
-        age_sq = age ** 2
-        glu_sq = avg_glucose ** 2
-        interaction = age * avg_glucose
+        st.success("✔️ Lower Risk of Stroke Detected")
 
-        # Encodings
-        gender_map  = {"Male":0, "Female":1}
-        married_map = {"Yes":1, "No":0}
-        work_map    = {"Private":0, "Self-employed":1, "Govt_job":2, "Never_worked":3}
-        htn_map     = {"Yes":1, "No":0}
-        heart_map   = {"Yes":1, "No":0}
-        smoke_map   = {"never smoked":0, "formerly smoked":1, "smokes":2}
+    # ── Feature contributions chart ─────────────────────────────────────────────
+    st.subheader("Understanding Your Results")
+    st.write("How each factor contributes to your overall risk:")
 
-        features = np.array([
-            heart_map[heart_disease], htn_map[hypertension], married_map[ever_married],
-            smoke_map[smoking_status], work_map[work_type], gender_map[gender],
-            age, avg_glucose, age_sq, interaction, glu_sq
-        ], dtype=float).reshape(1, -1)
+    # All features and importances
+    all_features = [
+        "Heart Disease", "Hypertension", "Ever Married",
+        "Smoking Status", "Work Type", "Gender",
+        "Age", "Avg Glucose", "Age²", "Age×Glucose", "Glucose²"
+    ]
+    importances = model.feature_importances_
+    pct = importances / importances.sum() * 100
 
-        prob = model.predict_proba(features)[0][1]
+    # Reorder to match input sequence
+    order_indices = [6, 5, 2, 4, 1, 0, 7, 3]
+    feature_names = [all_features[i] for i in order_indices]
+    importances_pct = pct[order_indices]
 
-        # Persist to session
-        st.session_state.user_data = {
-            "age": age,
-            "gender": gender,
-            "ever_married": ever_married,
-            "work_type": work_type,
-            "hypertension": hypertension,
-            "heart_disease": heart_disease,
-            "avg_glucose_level": avg_glucose,
-            "smoking_status": smoking_status
-        }
-        st.session_state.prediction_prob = prob
+    fig, ax = plt.subplots(figsize=(10, 5))
+    colors = plt.cm.tab20.colors
+    # highlight tallest bar in red
+    max_index = int(np.argmax(importances_pct))
+    bar_colors = ["red" if i == max_index else colors[i % len(colors)] for i in range(len(feature_names))]
+    bars = ax.bar(feature_names, importances_pct, color=bar_colors)
 
-        # Navigate
-        st.switch_page("pages/Results.py")
+    # Expand y-axis to fit labels
+    max_val = importances_pct.max()
+    ax.set_ylim(0, max_val * 1.15)
+
+    # Annotate each bar
+    for i, bar in enumerate(bars):
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + max_val * 0.02,
+            f"{importances_pct[i]:.2f}%",
+            ha="center",
+            va="bottom",
+            fontsize=11
+        )
+
+    ax.set_ylabel("Contribution to Risk (%)", fontsize=12, weight="bold")
+    ax.set_title("Feature Contributions to Stroke Risk Prediction", fontsize=14, weight="bold", pad=15)
+    plt.xticks(rotation=45, ha="right")
+    plt.tight_layout()
+    st.pyplot(fig)
+
+    # ── Recommendations button ────────────────────────────────────────────────
+    st.markdown("### 📘 Get personalized recommendations based on your results:")
+    if st.button("Click for Recommendations"):
+        st.switch_page("pages/Recommendations.py")
+
+    # ── Back link ─────────────────────────────────────────────────────────────
+    st.markdown("[🔙 Go back to Risk Assessment](/Risk_Assessment)")
+
+else:
+    st.warning("No user data found. Please complete the risk assessment first.")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
-<style>
-  .custom-footer {
-    background-color: rgba(76,157,112,0.6); color: white;
-    padding: 30px 0; border-radius: 12px; margin-top: 40px;
-    text-align: center; font-size: 14px; width: 100%;
-  }
-  .custom-footer a { color: white; text-decoration: none; margin: 0 15px; }
-  .custom-footer a:hover { text-decoration: underline; }
-</style>
-<div class="custom-footer">
-  <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
-  <p>
-    <a href='/Home'>Home</a>
-    <a href='/Risk_Assessment'>Risk Assessment</a>
-    <a href='/Results'>Results</a>
-    <a href='/Recommendations'>Recommendations</a>
-  </p>
-  <p style="font-size:12px; margin-top:10px;">Developed by Victoria Mends</p>
-</div>
+    <style>
+        .custom-footer {
+            background-color: rgba(76, 157, 112, 0.6);
+            color: white;
+            padding: 30px 0;
+            border-radius: 12px;
+            margin-top: 40px;
+            text-align: center;
+            font-size: 14px;
+            width: 100%;
+        }
+        .custom-footer a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+        }
+        .custom-footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <div class="custom-footer">
+        <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
+        <p>
+            <a href='/Home'>Home</a>
+            <a href='/Risk_Assessment'>Risk Assessment</a>
+            <a href='/Results'>Results</a>
+            <a href='/Recommendations'>Recommendations</a>
+        </p>
+        <p style="font-size:12px; margin-top:10px;">Developed by Victoria Mends</p>
+    </div>
 """, unsafe_allow_html=True)
