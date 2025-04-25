@@ -2,7 +2,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import joblib  # ← added to load your model
+import joblib
 
 # ── Page title & layout ───────────────────────────────────────────────────────
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
@@ -49,9 +49,13 @@ st.markdown("""
 # ── Load trained model for feature-importances ─────────────────────────────────
 @st.cache_resource
 def load_model():
-    base = os.path.dirname(os.path.abspath(__file__))
-    # model sits one level up
-    return joblib.load(os.path.join(os.path.dirname(base), "best_gb_model.pkl"))
+    # __file__ is pages/Results.py
+    pages_dir = os.path.dirname(os.path.abspath(__file__))
+    model_path = os.path.join(pages_dir, "best_gb_model.pkl")
+    if not os.path.exists(model_path):
+        st.error(f"⚠️ Model file not found at:\n`{model_path}`")
+        st.stop()
+    return joblib.load(model_path)
 
 model = load_model()
 
@@ -81,17 +85,20 @@ if 'user_data' in st.session_state and 'prediction_prob' in st.session_state:
     importances_pct = importances / importances.sum() * 100
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    # distinct color per bar via tab20 colormap
     colors = plt.cm.tab20.colors
-    bars = ax.bar(feature_names, importances_pct, color=[colors[i % len(colors)] for i in range(len(feature_names))])
-    
+    bars = ax.bar(feature_names,
+                  importances_pct,
+                  color=[colors[i % len(colors)] for i in range(len(feature_names))])
+
     # annotate percentages
     for i, bar in enumerate(bars):
         ax.text(
-            bar.get_x() + bar.get_width()/2,
+            bar.get_x() + bar.get_width() / 2,
             bar.get_height() + 0.5,
             f"{importances_pct[i]:.2f}%",
-            ha="center", va="bottom", fontsize=11
+            ha="center",
+            va="bottom",
+            fontsize=11
         )
 
     ax.set_ylabel("Contribution to Risk (%)", fontsize=12, weight="bold")
@@ -103,7 +110,6 @@ if 'user_data' in st.session_state and 'prediction_prob' in st.session_state:
     # ── Recommendations button ────────────────────────────────────────────────
     st.markdown("### 📘 Get personalized recommendations based on your results:")
     if st.button("Click for Recommendations"):
-        # navigate to the Recommendations page
         st.switch_page("pages/Recommendations.py")
 
     # ── Back link ─────────────────────────────────────────────────────────────
