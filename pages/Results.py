@@ -84,11 +84,12 @@ importances = model.feature_importances_
 # Absolute contribution: importance × risk probability × 100
 abs_contrib = importances[:8] * prob * 100
 
-# Order to match input sequence: Age(6), Gender(5), Ever Married(2), Work Type(4), Hypertension(1), Heart Disease(0), Avg Glucose(7), Smoking Status(3)
+# Order to match input sequence: Age, Gender, Ever Married, Work Type, Hypertension, Heart Disease, Avg Glucose, Smoking Status
 order = [6,5,2,4,1,0,7,3]
 feature_names = ["Age","Gender","Ever Married","Work Type","Hypertension","Heart Disease","Avg Glucose","Smoking Status"]
 contrib_values = abs_contrib[order]
 
+# Plot
 fig, ax = plt.subplots(figsize=(10,5))
 # Highlight the highest contributor in red
 max_idx = int(np.argmax(contrib_values))
