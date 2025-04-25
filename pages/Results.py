@@ -2,6 +2,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import joblib  # ← added to load your model
 
 # ── Page title & layout ───────────────────────────────────────────────────────
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
@@ -45,67 +46,65 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
+# ── Load trained model for feature-importances ─────────────────────────────────
+@st.cache_resource
+def load_model():
+    base = os.path.dirname(os.path.abspath(__file__))
+    # model sits one level up
+    return joblib.load(os.path.join(os.path.dirname(base), "best_gb_model.pkl"))
+
+model = load_model()
+
 # ── Display results ────────────────────────────────────────────────────────────
 if 'user_data' in st.session_state and 'prediction_prob' in st.session_state:
-    user_data       = st.session_state.user_data
     prediction_prob = st.session_state.prediction_prob
 
+    # Updated risk message
     st.header("🧠 Stroke Risk Probability")
-    st.write(f"Based on your input data, your stroke risk probability is: **{prediction_prob*100:.2f}%**")
+    st.write(f"Based on your input data, your risk of developing stroke is **{prediction_prob*100:.2f}%**")
+
     if prediction_prob > 0.5:
         st.warning("⚠️ Higher Risk of Stroke Detected")
     else:
         st.success("✔️ Lower Risk of Stroke Detected")
 
-    # ── Beautiful Bar Chart ────────────────────────────────────────────────────
+    # ── Feature contributions chart ─────────────────────────────────────────────
     st.subheader("Understanding Your Results")
     st.write("How each factor contributes to your overall risk:")
 
-    # build risk_data dict
-    smoke_map = {"never smoked":0, "formerly smoked":1, "smokes":2, "Unknown":3}
-    risk_data = {
-        'Age': user_data['age'],
-        'Hypertension': 1 if user_data['hypertension']=="Yes" else 0,
-        'Heart Disease': 1 if user_data['heart_disease']=="Yes" else 0,
-        'Average Glucose': user_data['avg_glucose_level'],
-        'Smoking Status': smoke_map.get(user_data['smoking_status'], 0)
-    }
-
-    labels = list(risk_data.keys())
-    values = list(risk_data.values())
-
-    # pastel colormap
-    cmap = plt.get_cmap("Pastel1")
-    colors = cmap(np.linspace(0, 1, len(labels)))
+    feature_names = [
+        "Heart Disease", "Hypertension", "Ever Married",
+        "Smoking Status", "Work Type", "Gender",
+        "Age", "Avg Glucose", "Age²", "Age×Glucose", "Glucose²"
+    ]
+    importances = model.feature_importances_
+    importances_pct = importances / importances.sum() * 100
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    fig.patch.set_facecolor("#f9f9f9")
-    ax.set_facecolor("#f9f9f9")
-
-    bars = ax.bar(labels, values, color=colors, edgecolor="white", linewidth=0.8)
-    ax.grid(axis="y", linestyle="--", alpha=0.6)
-    ax.set_ylabel("Score", fontsize=12, weight="bold")
-    ax.set_title("Your Health Factor Scores", fontsize=14, weight="bold", pad=15)
-    plt.xticks(rotation=30, ha="right", fontsize=11)
-
-    # annotate bar values
-    for bar in bars:
-        y = bar.get_height()
+    # distinct color per bar via tab20 colormap
+    colors = plt.cm.tab20.colors
+    bars = ax.bar(feature_names, importances_pct, color=[colors[i % len(colors)] for i in range(len(feature_names))])
+    
+    # annotate percentages
+    for i, bar in enumerate(bars):
         ax.text(
             bar.get_x() + bar.get_width()/2,
-            y + max(values)*0.02,
-            f"{y:.1f}",
-            ha="center",
-            va="bottom",
-            fontsize=11
+            bar.get_height() + 0.5,
+            f"{importances_pct[i]:.2f}%",
+            ha="center", va="bottom", fontsize=11
         )
 
+    ax.set_ylabel("Contribution to Risk (%)", fontsize=12, weight="bold")
+    ax.set_title("Feature Contributions to Stroke Risk Prediction", fontsize=14, weight="bold", pad=15)
+    plt.xticks(rotation=45, ha="right")
+    plt.tight_layout()
     st.pyplot(fig)
 
     # ── Recommendations button ────────────────────────────────────────────────
     st.markdown("### 📘 Get personalized recommendations based on your results:")
     if st.button("Click for Recommendations"):
-        st.query_params = {"page": "Recommendations"}
+        # navigate to the Recommendations page
+        st.switch_page("pages/Recommendations.py")
 
     # ── Back link ─────────────────────────────────────────────────────────────
     st.markdown("[🔙 Go back to Risk Assessment](/Risk_Assessment)")
