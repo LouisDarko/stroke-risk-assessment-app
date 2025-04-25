@@ -1,81 +1,147 @@
 import streamlit as st
-import os
-import joblib
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+import joblib  # ← added to load your model
 
-# ── Page config & hide defaults ────────────────────────────────────────────────
-st.set_page_config(page_title="Results", layout="wide")
+# ── Page title & layout ───────────────────────────────────────────────────────
+st.set_page_config(page_title="Stroke Risk Results", layout="wide")
 st.markdown("""
     <style>
-      #MainMenu, footer, header {visibility: hidden;}
+        #MainMenu, footer, header {visibility: hidden;}
+        [data-testid="stSidebar"], [data-testid="collapsedControl"] {display: none;}
     </style>
 """, unsafe_allow_html=True)
 
+st.title("📊 Stroke Risk Results")
+
 # ── Navbar ─────────────────────────────────────────────────────────────────────
 st.markdown("""
-  <style>
-    .custom-nav {
-      background: #e8f5e9; padding: 15px 0; border-radius: 10px;
-      display: flex; justify-content: center; gap: 60px; margin-bottom: 30px;
-      font-size: 18px; font-weight: 600;
-    }
-    .custom-nav a { text-decoration: none; color: #4C9D70; }
-    .custom-nav a:hover { color: #388e3c; text-decoration: underline; }
-  </style>
-  <div class="custom-nav">
-    <a href='/Home'>Home</a>
-    <a href='/Risk_Assessment'>Risk Assessment</a>
-    <a href='/Results'>Results</a>
-    <a href='/Recommendations'>Recommendations</a>
-  </div>
+    <style>
+        .custom-nav {
+            background-color: #e8f5e9;
+            padding: 15px 0;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            margin-bottom: 30px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .custom-nav a {
+            text-decoration: none;
+            color: #4C9D70;
+        }
+        .custom-nav a:hover {
+            color: #388e3c;
+            text-decoration: underline;
+        }
+    </style>
+    <div class="custom-nav">
+        <a href='/Home'>Home</a>
+        <a href='/Risk_Assessment'>Risk Assessment</a>
+        <a href='/Results'>Results</a>
+        <a href='/Recommendations'>Recommendations</a>
+    </div>
 """, unsafe_allow_html=True)
 
-# ── Load the trained model ─────────────────────────────────────────────────────
+# ── Load trained model for feature-importances ─────────────────────────────────
 @st.cache_resource
 def load_model():
-    # model file sits one level up from this pages/ folder
     base = os.path.dirname(os.path.abspath(__file__))
+    # model sits one level up
     return joblib.load(os.path.join(os.path.dirname(base), "best_gb_model.pkl"))
 
 model = load_model()
 
-# ── Retrieve & display your risk % ─────────────────────────────────────────────
-prob = st.session_state.get("prediction_prob", None)
-if prob is None:
-    st.error("No prediction found. Please complete the risk assessment first.")
-    st.stop()
+# ── Display results ────────────────────────────────────────────────────────────
+if 'user_data' in st.session_state and 'prediction_prob' in st.session_state:
+    prediction_prob = st.session_state.prediction_prob
 
-st.markdown(
-    f"### Based on your input data, your risk of developing stroke is **{prob * 100:.2f}%**"
-)
+    # Updated risk message
+    st.header("🧠 Stroke Risk Probability")
+    st.write(f"Based on your input data, your risk of developing stroke is **{prediction_prob*100:.2f}%**")
 
-# ── Build & plot feature‐importance (%) ────────────────────────────────────────
-feature_names = [
-    "Heart Disease", "Hypertension", "Ever Married", "Smoking Status",
-    "Work Type", "Gender", "Age", "Avg Glucose", "Age²", "Age×Glucose", "Glucose²"
-]
-# global importances from your gradient‐boost model
-importances = model.feature_importances_
-# convert to percentages
-importances_pct = importances / importances.sum() * 100
+    if prediction_prob > 0.5:
+        st.warning("⚠️ Higher Risk of Stroke Detected")
+    else:
+        st.success("✔️ Lower Risk of Stroke Detected")
 
-fig, ax = plt.subplots()
-bars = ax.bar(feature_names, importances_pct)
-# give each bar its own color
-colors = plt.cm.tab20.colors
-for i, bar in enumerate(bars):
-    bar.set_color(colors[i % len(colors)])
-# annotate with “xx.xx%”
-for i, v in enumerate(importances_pct):
-    ax.text(i, v + 0.5, f"{v:.2f}%", ha="center", va="bottom")
-ax.set_ylabel("Contribution to Risk (%)")
-ax.set_title("Feature Contributions to Stroke Risk Prediction")
-plt.xticks(rotation=45, ha="right")
-plt.tight_layout()
-st.pyplot(fig)
+    # ── Feature contributions chart ─────────────────────────────────────────────
+    st.subheader("Understanding Your Results")
+    st.write("How each factor contributes to your overall risk:")
 
-# ── Recommendations button ────────────────────────────────────────────────────
-if st.button("Click for recommendations"):
-    # must use the relative path from root
-    st.switch_page("pages/Recommendations.py")
+    feature_names = [
+        "Heart Disease", "Hypertension", "Ever Married",
+        "Smoking Status", "Work Type", "Gender",
+        "Age", "Avg Glucose", "Age²", "Age×Glucose", "Glucose²"
+    ]
+    importances = model.feature_importances_
+    importances_pct = importances / importances.sum() * 100
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    # distinct color per bar via tab20 colormap
+    colors = plt.cm.tab20.colors
+    bars = ax.bar(feature_names, importances_pct, color=[colors[i % len(colors)] for i in range(len(feature_names))])
+    
+    # annotate percentages
+    for i, bar in enumerate(bars):
+        ax.text(
+            bar.get_x() + bar.get_width()/2,
+            bar.get_height() + 0.5,
+            f"{importances_pct[i]:.2f}%",
+            ha="center", va="bottom", fontsize=11
+        )
+
+    ax.set_ylabel("Contribution to Risk (%)", fontsize=12, weight="bold")
+    ax.set_title("Feature Contributions to Stroke Risk Prediction", fontsize=14, weight="bold", pad=15)
+    plt.xticks(rotation=45, ha="right")
+    plt.tight_layout()
+    st.pyplot(fig)
+
+    # ── Recommendations button ────────────────────────────────────────────────
+    st.markdown("### 📘 Get personalized recommendations based on your results:")
+    if st.button("Click for Recommendations"):
+        # navigate to the Recommendations page
+        st.switch_page("pages/Recommendations.py")
+
+    # ── Back link ─────────────────────────────────────────────────────────────
+    st.markdown("[🔙 Go back to Risk Assessment](/Risk_Assessment)")
+
+else:
+    st.warning("No user data found. Please complete the risk assessment first.")
+
+# ── Footer ────────────────────────────────────────────────────────────────────
+st.markdown("""
+    <style>
+        .custom-footer {
+            background-color: rgba(76, 157, 112, 0.6);
+            color: white;
+            padding: 30px 0;
+            border-radius: 12px;
+            margin-top: 40px;
+            text-align: center;
+            font-size: 14px;
+            width: 100%;
+        }
+        .custom-footer a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+        }
+        .custom-footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <div class="custom-footer">
+        <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
+        <p>
+            <a href='/Home'>Home</a>
+            <a href='/Risk_Assessment'>Risk Assessment</a>
+            <a href='/Results'>Results</a>
+            <a href='/Recommendations'>Recommendations</a>
+        </p>
+        <p style="font-size:12px; margin-top:10px;">Developed by Victoria Mends</p>
+    </div>
+""", unsafe_allow_html=True)
