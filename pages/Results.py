@@ -49,7 +49,6 @@ st.markdown("""
 # ── Load trained model for feature-importances ─────────────────────────────────
 @st.cache_resource
 def load_model():
-    # __file__ is pages/Results.py
     pages_dir = os.path.dirname(os.path.abspath(__file__))
     model_path = os.path.join(pages_dir, "best_gb_model.pkl")
     if not os.path.exists(model_path):
@@ -76,25 +75,37 @@ if 'user_data' in st.session_state and 'prediction_prob' in st.session_state:
     st.subheader("Understanding Your Results")
     st.write("How each factor contributes to your overall risk:")
 
-    feature_names = [
+    # Full list (includes engineered features at the end)
+    all_features = [
         "Heart Disease", "Hypertension", "Ever Married",
         "Smoking Status", "Work Type", "Gender",
         "Age", "Avg Glucose", "Age²", "Age×Glucose", "Glucose²"
     ]
     importances = model.feature_importances_
-    importances_pct = importances / importances.sum() * 100
+    pct = importances / importances.sum() * 100
 
+    # Keep only the first 8 (the ones the user directly inputs)
+    feature_names = all_features[:8]
+    importances_pct = pct[:8]
+
+    # Plot
     fig, ax = plt.subplots(figsize=(10, 5))
     colors = plt.cm.tab20.colors
-    bars = ax.bar(feature_names,
-                  importances_pct,
-                  color=[colors[i % len(colors)] for i in range(len(feature_names))])
+    bars = ax.bar(
+        feature_names,
+        importances_pct,
+        color=[colors[i % len(colors)] for i in range(len(feature_names))]
+    )
 
-    # annotate percentages
+    # Expand y-axis so labels fit
+    max_val = importances_pct.max()
+    ax.set_ylim(0, max_val * 1.15)
+
+    # Annotate each bar with its percentage
     for i, bar in enumerate(bars):
         ax.text(
             bar.get_x() + bar.get_width() / 2,
-            bar.get_height() + 0.5,
+            bar.get_height() + max_val * 0.02,
             f"{importances_pct[i]:.2f}%",
             ha="center",
             va="bottom",
