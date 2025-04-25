@@ -46,7 +46,8 @@ st.markdown("""
 risk_prob = st.session_state.get("prediction_prob")
 if risk_prob is None:
     st.warning("⚠️ No stroke risk score found. Please complete the assessment first.")
-    st.page_link("Results", label="Go to Results Page")
+    # Redirect user to input their data
+    st.page_link("pages/Risk_Assessment.py", label="Go to Risk Assessment")
     st.stop()
 
 # Convert to percentage
@@ -106,9 +107,11 @@ st.markdown("""
 # ── Navigation buttons ─────────────────────────────────────────────────────────
 col1, col2 = st.columns(2)
 with col1:
-    st.page_link("Risk_Assessment", label="🔁 Reassess Risk")
+    # Use file path for Risk_Assessment page
+    st.page_link("pages/Risk_Assessment.py", label="🔁 Reassess Risk")
 with col2:
-    st.page_link("Home", label="🏠 Back to Home")
+    # Link back to main app
+    st.page_link("app.py", label="🏠 Back to Home")
 
 # ── Footer ─────────────────────────────────────────────────────────────────────
 st.markdown("""
