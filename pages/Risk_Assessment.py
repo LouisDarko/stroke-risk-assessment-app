@@ -157,7 +157,7 @@ if st.button("Calculate Stroke Risk 📈"):
         st.session_state.prediction_prob = prob
 
         # navigate to your Results page
-        st.switch_page("Results")
+        st.switch_page("pages/Results.py")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
