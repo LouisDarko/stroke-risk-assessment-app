@@ -62,7 +62,6 @@ model = load_model()
 if 'user_data' in st.session_state and 'prediction_prob' in st.session_state:
     prediction_prob = st.session_state.prediction_prob
 
-    # Updated risk message
     st.header("🧠 Stroke Risk Probability")
     st.write(f"Based on your input data, your risk of developing stroke is **{prediction_prob*100:.2f}%**")
 
@@ -75,7 +74,7 @@ if 'user_data' in st.session_state and 'prediction_prob' in st.session_state:
     st.subheader("Understanding Your Results")
     st.write("How each factor contributes to your overall risk:")
 
-    # Full list (includes engineered features at the end)
+    # Full feature list and importances from the model:
     all_features = [
         "Heart Disease", "Hypertension", "Ever Married",
         "Smoking Status", "Work Type", "Gender",
@@ -84,11 +83,11 @@ if 'user_data' in st.session_state and 'prediction_prob' in st.session_state:
     importances = model.feature_importances_
     pct = importances / importances.sum() * 100
 
-    # Keep only the first 8 (the ones the user directly inputs)
-    feature_names = all_features[:8]
-    importances_pct = pct[:8]
+    # Reorder to match input sequence:
+    order_indices = [6, 5, 2, 4, 1, 0, 7, 3]  # Age, Gender, Ever Married, Work Type, Hypertension, Heart Disease, Avg Glucose, Smoking Status
+    feature_names = [all_features[i] for i in order_indices]
+    importances_pct = pct[order_indices]
 
-    # Plot
     fig, ax = plt.subplots(figsize=(10, 5))
     colors = plt.cm.tab20.colors
     bars = ax.bar(
@@ -97,11 +96,11 @@ if 'user_data' in st.session_state and 'prediction_prob' in st.session_state:
         color=[colors[i % len(colors)] for i in range(len(feature_names))]
     )
 
-    # Expand y-axis so labels fit
+    # Expand y-axis to fit the highest label
     max_val = importances_pct.max()
     ax.set_ylim(0, max_val * 1.15)
 
-    # Annotate each bar with its percentage
+    # Annotate each bar
     for i, bar in enumerate(bars):
         ax.text(
             bar.get_x() + bar.get_width() / 2,
