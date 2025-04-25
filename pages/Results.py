@@ -46,92 +46,89 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# ── Load trained model for feature-importances ─────────────────────────────────
+# ── Load trained model ────────────────────────────────────────────────────────
 @st.cache_resource
 def load_model():
     pages_dir = os.path.dirname(os.path.abspath(__file__))
     model_path = os.path.join(pages_dir, "best_gb_model.pkl")
     if not os.path.exists(model_path):
-        st.error(f"⚠️ Model file not found at:\n`{model_path}`")
+        st.error(f"⚠️ Model file not found at: {model_path}")
         st.stop()
     return joblib.load(model_path)
 
 model = load_model()
 
-# ── Display results ────────────────────────────────────────────────────────────
-if 'user_data' in st.session_state and 'prediction_prob' in st.session_state:
-    prediction_prob = st.session_state.prediction_prob
+# ── Retrieve prediction ───────────────────────────────────────────────────────
+if 'prediction_prob' not in st.session_state:
+    st.error("⚠️ No stroke risk score found. Please complete the assessment first.")
+    st.page_link("pages/Risk_Assessment.py", label="Go to Risk Assessment")
+    st.stop()
 
-    st.header("🧠 Stroke Risk Probability")
-    st.write(f"Based on your input data, your risk of developing stroke is **{prediction_prob*100:.2f}%**")
+prob = st.session_state.prediction_prob
+risk_score = prob * 100
 
-    if prediction_prob > 0.5:
-        st.warning("⚠️ Higher Risk of Stroke Detected")
-    else:
-        st.success("✔️ Lower Risk of Stroke Detected")
-
-    # ── Feature contributions chart ─────────────────────────────────────────────
-    st.subheader("Understanding Your Results")
-    st.write("How each factor contributes to your overall risk:")
-
-    # All features and importances
-    all_features = [
-        "Heart Disease", "Hypertension", "Ever Married",
-        "Smoking Status", "Work Type", "Gender",
-        "Age", "Avg Glucose", "Age²", "Age×Glucose", "Glucose²"
-    ]
-    importances = model.feature_importances_
-    pct = importances / importances.sum() * 100
-
-    # Reorder to match input sequence
-    order_indices = [6, 5, 2, 4, 1, 0, 7, 3]
-    feature_names = [all_features[i] for i in order_indices]
-    importances_pct = pct[order_indices]
-
-    fig, ax = plt.subplots(figsize=(10, 5))
-    colors = plt.cm.tab20.colors
-    # highlight tallest bar in red
-    max_index = int(np.argmax(importances_pct))
-    bar_colors = ["red" if i == max_index else colors[i % len(colors)] for i in range(len(feature_names))]
-    bars = ax.bar(feature_names, importances_pct, color=bar_colors)
-
-    # Expand y-axis to fit labels
-    max_val = importances_pct.max()
-    ax.set_ylim(0, max_val * 1.15)
-
-    # Annotate each bar
-    for i, bar in enumerate(bars):
-        ax.text(
-            bar.get_x() + bar.get_width() / 2,
-            bar.get_height() + max_val * 0.02,
-            f"{importances_pct[i]:.2f}%",
-            ha="center",
-            va="bottom",
-            fontsize=11
-        )
-
-    ax.set_ylabel("Contribution to Risk (%)", fontsize=12, weight="bold")
-    ax.set_title("Feature Contributions to Stroke Risk Prediction", fontsize=14, weight="bold", pad=15)
-    plt.xticks(rotation=45, ha="right")
-    plt.tight_layout()
-    st.pyplot(fig)
-
-    # ── Recommendations button ────────────────────────────────────────────────
-    st.markdown("### 📘 Get personalized recommendations based on your results:")
-    if st.button("Click for Recommendations"):
-        st.switch_page("pages/Recommendations.py")
-
-    # ── Back link ─────────────────────────────────────────────────────────────
-    st.markdown("[🔙 Go back to Risk Assessment](/Risk_Assessment)")
-
+st.header("🧠 Stroke Risk Probability")
+st.write(f"Based on your input data, your risk of developing stroke is **{risk_score:.2f}%**")
+if prob > 0.5:
+    st.warning("⚠️ Higher Risk of Stroke Detected")
 else:
-    st.warning("No user data found. Please complete the risk assessment first.")
+    st.success("✔️ Lower Risk of Stroke Detected")
+
+# ── Feature contributions ─────────────────────────────────────────────────────
+st.subheader("Understanding Your Results")
+st.write("How much each factor contributed to your overall risk (bars sum to your risk):")
+
+# Base features and importances
+# Indices correspond to: [0:Heart Disease,1:Hypertension,2:Ever Married,3:Smoking Status,4:Work Type,5:Gender,6:Age,7:Avg Glucose]
+importances = model.feature_importances_
+# Absolute contribution: importance × risk probability × 100
+abs_contrib = importances[:8] * prob * 100
+
+# Order to match input sequence: Age(6), Gender(5), Ever Married(2), Work Type(4), Hypertension(1), Heart Disease(0), Avg Glucose(7), Smoking Status(3)
+order = [6,5,2,4,1,0,7,3]
+feature_names = ["Age","Gender","Ever Married","Work Type","Hypertension","Heart Disease","Avg Glucose","Smoking Status"]
+contrib_values = abs_contrib[order]
+
+fig, ax = plt.subplots(figsize=(10,5))
+# Highlight the highest contributor in red
+max_idx = int(np.argmax(contrib_values))
+base_colors = plt.cm.tab20.colors
+bar_colors = ["red" if i==max_idx else base_colors[i % len(base_colors)] for i in range(len(feature_names))]
+bars = ax.bar(feature_names, contrib_values, color=bar_colors)
+
+# Expand y-axis so labels fit
+top = contrib_values.max() * 1.15
+ax.set_ylim(0, top)
+
+# Annotate each bar with its contribution
+for i, bar in enumerate(bars):
+    ax.text(
+        bar.get_x() + bar.get_width()/2,
+        bar.get_height() + top*0.01,
+        f"{contrib_values[i]:.2f}%",
+        ha="center", va="bottom",
+        fontsize=11
+    )
+
+ax.set_ylabel("Contribution to Risk (%)", fontsize=12, weight="bold")
+ax.set_title("Feature Contributions to Stroke Risk Prediction", fontsize=14, weight="bold")
+plt.xticks(rotation=45, ha="right")
+plt.tight_layout()
+st.pyplot(fig)
+
+# ── Recommendations button ───────────────────────────────────────────────────
+st.markdown("### 🎯 Personalized Recommendations")
+if st.button("Click for Recommendations"):
+    st.switch_page("pages/Recommendations.py")
+
+# ── Back link ─────────────────────────────────────────────────────────────────
+st.markdown("[🔙 Go back to Risk Assessment](/Risk_Assessment)")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
     <style>
         .custom-footer {
-            background-color: rgba(76, 157, 112, 0.6);
+            background-color: rgba(76,157,112,0.6);
             color: white;
             padding: 30px 0;
             border-radius: 12px;
@@ -140,14 +137,8 @@ st.markdown("""
             font-size: 14px;
             width: 100%;
         }
-        .custom-footer a {
-            color: white;
-            text-decoration: none;
-            margin: 0 15px;
-        }
-        .custom-footer a:hover {
-            text-decoration: underline;
-        }
+        .custom-footer a { color: white; text-decoration: none; margin: 0 15px; }
+        .custom-footer a:hover { text-decoration: underline; }
     </style>
     <div class="custom-footer">
         <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
