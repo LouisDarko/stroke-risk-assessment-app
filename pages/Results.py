@@ -49,7 +49,6 @@ st.markdown("""
 # ── Load trained model for feature-importances ─────────────────────────────────
 @st.cache_resource
 def load_model():
-    # __file__ is pages/Results.py
     pages_dir = os.path.dirname(os.path.abspath(__file__))
     model_path = os.path.join(pages_dir, "best_gb_model.pkl")
     if not os.path.exists(model_path):
@@ -63,7 +62,6 @@ model = load_model()
 if 'user_data' in st.session_state and 'prediction_prob' in st.session_state:
     prediction_prob = st.session_state.prediction_prob
 
-    # Updated risk message
     st.header("🧠 Stroke Risk Probability")
     st.write(f"Based on your input data, your risk of developing stroke is **{prediction_prob*100:.2f}%**")
 
@@ -76,25 +74,39 @@ if 'user_data' in st.session_state and 'prediction_prob' in st.session_state:
     st.subheader("Understanding Your Results")
     st.write("How each factor contributes to your overall risk:")
 
-    feature_names = [
+    # All features and importances
+    all_features = [
         "Heart Disease", "Hypertension", "Ever Married",
         "Smoking Status", "Work Type", "Gender",
         "Age", "Avg Glucose", "Age²", "Age×Glucose", "Glucose²"
     ]
     importances = model.feature_importances_
-    importances_pct = importances / importances.sum() * 100
+    pct = importances / importances.sum() * 100
+
+    # Reorder to match input sequence
+    order_indices = [6, 5, 2, 4, 1, 0, 7, 3]
+    feature_names = [all_features[i] for i in order_indices]
+    importances_pct = pct[order_indices]
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    colors = plt.cm.tab20.colors
-    bars = ax.bar(feature_names,
-                  importances_pct,
-                  color=[colors[i % len(colors)] for i in range(len(feature_names))])
+    base_colors = plt.cm.tab20.colors
+    max_index = int(np.argmax(importances_pct))
+    bar_colors = ["red" if i == max_index else base_colors[i % len(base_colors)] for i in range(len(feature_names))]
+    bars = ax.bar(
+        feature_names,
+        importances_pct,
+        color=bar_colors
+    )
 
-    # annotate percentages
+    # Expand y-axis to fit the highest label
+    max_val = importances_pct.max()
+    ax.set_ylim(0, max_val * 1.15)
+
+    # Annotate each bar with percentage
     for i, bar in enumerate(bars):
         ax.text(
             bar.get_x() + bar.get_width() / 2,
-            bar.get_height() + 0.5,
+            bar.get_height() + max_val * 0.02,
             f"{importances_pct[i]:.2f}%",
             ha="center",
             va="bottom",
