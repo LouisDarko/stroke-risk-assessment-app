@@ -55,7 +55,7 @@ risk_score = risk_prob * 100
 st.markdown(f"### 🧠 Your estimated stroke risk is **{risk_score:.2f}%**.")
 
 # ── Personalized recommendations ──────────────────────────────────────────────
-st.subheader("🔎 Personalized Recommendations")
+st.subheader("🎯 Personalized Recommendations")
 
 # Special case: zero risk
 if risk_score == 0:
