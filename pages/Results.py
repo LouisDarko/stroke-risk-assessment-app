@@ -50,7 +50,7 @@ model = load_model()
 if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     prob = st.session_state.prediction_prob  # e.g. 0.02
 
-    st.header("🧠 Your Percentage Risk")
+    st.header("🧠 Stroke Percentage Risk")
     st.write(f"Based on your inputs, your estimated risk is **{prob*100:.2f}%**")
 
     if prob > 0.5:
