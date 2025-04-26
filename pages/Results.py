@@ -130,7 +130,7 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
             st.switch_page("Risk_Assessment")
     with col2:
         if st.button("📘 Go to Recommendations"):
-            st.switch_page("Recommendations")
+            st.switch_page("pages/Recommendations.py")
 
 else:
     st.warning("No input data found. Please complete the Risk Assessment first.")
