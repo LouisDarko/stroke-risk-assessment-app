@@ -88,11 +88,16 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
         glu_sq
     ]])
 
-    # Now SHAP sees exactly the same 11 features it was trained on
-    shap_vals_full = explainer.shap_values(full_X)[1][0]   # class-1 contributions
-    raw8           = shap_vals_full[:8]
-    abs8           = np.abs(raw8)
-    contrib        = abs8 / abs8.sum() * prob  # eight bars sum to total risk
+    # Compute SHAP values with correct feature shape
+    sv = explainer.shap_values(full_X)
+    if isinstance(sv, list):
+        shap_vals_full = sv[1][0]  # for class 1
+    else:
+        shap_vals_full = sv[0]     # single-array output
+
+    raw8    = shap_vals_full[:8]
+    abs8    = np.abs(raw8)
+    contrib = abs8 / abs8.sum() * prob  # eight bars sum to total risk
 
     feature_names = [
         "Heart Disease", "Hypertension", "Ever Married",
@@ -152,6 +157,7 @@ st.markdown("""
     <p style="font-size:12px; margin-top:10px;">Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
+
 
 
 
