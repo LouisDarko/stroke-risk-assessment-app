@@ -65,8 +65,8 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     else:
         st.success("✔️ Lower Risk of Stroke Detected")
 
-    # Handle zero risk: no contribution chart
-    if prob <= 0:
+    # Only plot contributions when risk > 0
+    if prob == 0:
         st.info("Your predicted risk is 0%; there are no feature contributions to display.")
     else:
         # Reconstruct the full 11-feature input
@@ -95,44 +95,41 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
 
         raw8 = shap_vals_full[:8]
         abs8 = np.abs(raw8)
-        if abs8.sum() == 0:
-            st.info("No feature contributions detected.")
-        else:
-            contrib = abs8 / abs8.sum() * prob
+        contrib = abs8 / abs8.sum() * prob
 
-            feature_names = [
-                "Heart Disease", "Hypertension", "Ever Married",
-                "Smoking Status", "Work Type", "Gender",
-                "Age", "Avg Glucose"
-            ]
+        feature_names = [
+            "Heart Disease", "Hypertension", "Ever Married",
+            "Smoking Status", "Work Type", "Gender",
+            "Age", "Avg Glucose"
+        ]
 
-            # Determine colors: tallest bar red, others from default palette
-            default_colors = [
-                "#636EFA", "#00CC96", "#AB63FA", "#FFA15A",
-                "#19D3F3", "#FF6692", "#B6E880", "#FF97FF"
-            ]
-            top_idx = int(np.argmax(contrib))
-            colors = ["red" if i == top_idx else default_colors[i % len(default_colors)]
-                      for i in range(len(feature_names))]
+        # Determine colors: tallest bar red, others from default palette
+        default_colors = [
+            "#636EFA", "#00CC96", "#AB63FA", "#FFA15A",
+            "#19D3F3", "#FF6692", "#B6E880", "#FF97FF"
+        ]
+        top_idx = int(np.argmax(contrib))
+        colors = ["red" if i == top_idx else default_colors[i % len(default_colors)]
+                  for i in range(len(feature_names))]
 
-            # Interactive Plotly bar chart
-            fig = go.Figure(
-                go.Bar(
-                    x=feature_names,
-                    y=contrib * 100,
-                    marker=dict(color=colors),
-                    text=[f"{v*100:.2f}%" for v in contrib],
-                    textposition="auto",
-                    hovertemplate="<b>%{x}</b><br>Contribution: %{y:.2f}%<extra></extra>"
-                )
+        # Interactive Plotly bar chart
+        fig = go.Figure(
+            go.Bar(
+                x=feature_names,
+                y=contrib * 100,
+                marker=dict(color=colors),
+                text=[f"{v*100:.2f}%" for v in contrib],
+                textposition="auto",
+                hovertemplate="<b>%{x}</b><br>Contribution: %{y:.2f}%<extra></extra>"
             )
-            fig.update_layout(
-                title="How Each Input Contributed to Your Total Risk",
-                yaxis=dict(title="Contribution to Risk (%)"),
-                xaxis=dict(tickangle=-45),
-                margin=dict(t=60, b=120)
-            )
-            st.plotly_chart(fig, use_container_width=True)
+        )
+        fig.update_layout(
+            title="How Each Input Contributed to Your Total Risk",
+            yaxis=dict(title="Contribution to Risk (%)"),
+            xaxis=dict(tickangle=-45),
+            margin=dict(t=60, b=120)
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
     # Navigation Buttons
     col1, col2 = st.columns(2)
