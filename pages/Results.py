@@ -58,7 +58,7 @@ explainer = get_explainer(model)
 if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     prob = st.session_state.prediction_prob  # e.g. 0.02
 
-    st.header("🧠 Your Stroke Risk")
+    st.header("🧠 Stroke Percentage Risk")
     st.write(f"Based on your inputs, your estimated risk is **{prob*100:.2f}%**")
 
     if prob > 0.5:
@@ -127,7 +127,7 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🔙 Back to Risk Assessment"):
-            st.switch_page("Risk_Assessment")
+            st.switch_page("pages/Risk_Assessment.py")
     with col2:
         if st.button("📘 Go to Recommendations"):
             st.switch_page("pages/Recommendations.py")
