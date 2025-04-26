@@ -49,14 +49,13 @@ model = load_model()
 # ── Compute SHAP explainer once ────────────────────────────────────────────────
 @st.cache_resource
 def get_explainer(_mdl):
-    # leading underscore prevents hashing of the model object
     return shap.TreeExplainer(_mdl)
 
 explainer = get_explainer(model)
 
 # ── Display results & SHAP-based contributions ─────────────────────────────────
 if "user_data" in st.session_state and "prediction_prob" in st.session_state:
-    prob = st.session_state.prediction_prob  # e.g. 0.02
+    prob = st.session_state.prediction_prob
 
     st.header("🧠 Stroke Percentage Risk")
     st.write(f"Based on your inputs, your estimated risk is **{prob*100:.2f}%**")
@@ -66,13 +65,13 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     else:
         st.success("✔️ Lower Risk of Stroke Detected")
 
-    # Reconstruct the full 11-feature input (same as in Risk_Assessment)
+    # Reconstruct the full 11-feature input
     UD = st.session_state.user_data
-    age   = UD["age"]
-    glu   = UD["avg_glucose_level"]
-    age_sq      = age ** 2
+    age = UD["age"]
+    glu = UD["avg_glucose_level"]
+    age_sq = age ** 2
     interaction = age * glu
-    glu_sq      = glu ** 2
+    glu_sq = glu ** 2
 
     full_X = np.array([[
         {"Yes":1,"No":0}[UD["heart_disease"]],
@@ -81,23 +80,18 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
         {"never smoked":0,"formerly smoked":1,"smokes":2}[UD["smoking_status"]],
         {"Private":0,"Self-employed":1,"Govt_job":2,"Never_worked":3}[UD["work_type"]],
         {"Male":0,"Female":1}[UD["gender"]],
-        age,
-        glu,
-        age_sq,
-        interaction,
-        glu_sq
+        age, glu, age_sq, interaction, glu_sq
     ]])
 
-    # Compute SHAP values with correct feature shape
     sv = explainer.shap_values(full_X)
     if isinstance(sv, list):
-        shap_vals_full = sv[1][0]  # for class 1
+        shap_vals_full = sv[1][0]
     else:
-        shap_vals_full = sv[0]     # single-array output
+        shap_vals_full = sv[0]
 
-    raw8    = shap_vals_full[:8]
-    abs8    = np.abs(raw8)
-    contrib = abs8 / abs8.sum() * prob  # eight bars sum to total risk
+    raw8 = shap_vals_full[:8]
+    abs8 = np.abs(raw8)
+    contrib = abs8 / abs8.sum() * prob
 
     feature_names = [
         "Heart Disease", "Hypertension", "Ever Married",
@@ -105,11 +99,22 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
         "Age", "Avg Glucose"
     ]
 
+    # Determine colors: tallest bar red, others from default palette
+    # Default Plotly qualitative colors
+    default_colors = [
+        "#636EFA", "#00CC96", "#AB63FA", "#FFA15A",
+        "#19D3F3", "#FF6692", "#B6E880", "#FF97FF"
+    ]
+    top_idx = int(np.argmax(contrib))
+    colors = ["red" if i == top_idx else default_colors[i % len(default_colors)]
+              for i in range(len(feature_names))]
+
     # Interactive Plotly bar chart
     fig = go.Figure(
         go.Bar(
             x=feature_names,
             y=contrib * 100,
+            marker=dict(color=colors),
             text=[f"{v*100:.2f}%" for v in contrib],
             textposition="auto",
             hovertemplate="<b>%{x}</b><br>Contribution: %{y:.2f}%<extra></extra>"
@@ -123,14 +128,14 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # ── Navigation Buttons ────────────────────────────────────────────────────
+    # Navigation Buttons
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🔙 Back to Risk Assessment"):
-            st.switch_page("pages/Risk_Assessment.py")
+            st.switch_page("Risk_Assessment")
     with col2:
         if st.button("📘 Go to Recommendations"):
-            st.switch_page("pages/Recommendations.py")
+            st.switch_page("Recommendations")
 
 else:
     st.warning("No input data found. Please complete the Risk Assessment first.")
@@ -138,11 +143,9 @@ else:
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
   <style>
-    .custom-footer {
-      background-color: rgba(76,157,112,0.6); color: white;
+    .custom-footer { background-color: rgba(76,157,112,0.6); color: white;
       padding: 30px 0; border-radius: 12px; margin-top: 40px;
-      text-align: center; font-size: 14px; width: 100%;
-    }
+      text-align: center; font-size: 14px; width: 100%; }
     .custom-footer a { color: white; text-decoration: none; margin: 0 15px; }
     .custom-footer a:hover { text-decoration: underline; }
   </style>
@@ -157,6 +160,7 @@ st.markdown("""
     <p style="font-size:12px; margin-top:10px;">Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
+
 
 
 
