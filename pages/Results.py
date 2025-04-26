@@ -49,12 +49,12 @@ model = load_model()
 # ── Compute SHAP explainer once ────────────────────────────────────────────────
 @st.cache_resource
 def get_explainer(_mdl):
-    # leading underscore tells Streamlit not to try hashing the model object
+    # leading underscore prevents hashing of the model object
     return shap.TreeExplainer(_mdl)
 
 explainer = get_explainer(model)
 
-# ── Display results & SHAP‐based contributions ─────────────────────────────────
+# ── Display results & SHAP-based contributions ─────────────────────────────────
 if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     prob = st.session_state.prediction_prob  # e.g. 0.02
 
@@ -66,23 +66,33 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     else:
         st.success("✔️ Lower Risk of Stroke Detected")
 
-    # Prepare the same eight raw features for SHAP
+    # Reconstruct the full 11-feature input (same as in Risk_Assessment)
     UD = st.session_state.user_data
-    X = np.array([[
+    age   = UD["age"]
+    glu   = UD["avg_glucose_level"]
+    age_sq      = age ** 2
+    interaction = age * glu
+    glu_sq      = glu ** 2
+
+    full_X = np.array([[
         {"Yes":1,"No":0}[UD["heart_disease"]],
         {"Yes":1,"No":0}[UD["hypertension"]],
         {"Yes":1,"No":0}[UD["ever_married"]],
         {"never smoked":0,"formerly smoked":1,"smokes":2}[UD["smoking_status"]],
         {"Private":0,"Self-employed":1,"Govt_job":2,"Never_worked":3}[UD["work_type"]],
         {"Male":0,"Female":1}[UD["gender"]],
-        UD["age"],
-        UD["avg_glucose_level"],
+        age,
+        glu,
+        age_sq,
+        interaction,
+        glu_sq
     ]])
 
-    shap_vals = explainer.shap_values(X)[1][0]   # class-1 contributions
-    raw8     = shap_vals[:8]
-    abs8     = np.abs(raw8)
-    contrib  = abs8 / abs8.sum() * prob        # ensure eight bars sum to total risk
+    # Now SHAP sees exactly the same 11 features it was trained on
+    shap_vals_full = explainer.shap_values(full_X)[1][0]   # class-1 contributions
+    raw8           = shap_vals_full[:8]
+    abs8           = np.abs(raw8)
+    contrib        = abs8 / abs8.sum() * prob  # eight bars sum to total risk
 
     feature_names = [
         "Heart Disease", "Hypertension", "Ever Married",
