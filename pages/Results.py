@@ -4,7 +4,7 @@ import joblib
 import numpy as np
 import shap
 import plotly.graph_objects as go
- 
+
 # ── Page config & hide defaults ────────────────────────────────────────────────
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
 st.markdown("""
@@ -46,11 +46,19 @@ def load_model():
 
 model = load_model()
 
+# ── Compute SHAP explainer once ────────────────────────────────────────────────
+@st.cache_resource
+def get_explainer(_mdl):
+    # leading underscore tells Streamlit not to try hashing the model object
+    return shap.TreeExplainer(_mdl)
+
+explainer = get_explainer(model)
+
 # ── Display results & SHAP‐based contributions ─────────────────────────────────
 if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     prob = st.session_state.prediction_prob  # e.g. 0.02
 
-    st.header("🧠 Stroke Percentage Risk")
+    st.header("🧠 Your Stroke Risk")
     st.write(f"Based on your inputs, your estimated risk is **{prob*100:.2f}%**")
 
     if prob > 0.5:
@@ -71,16 +79,10 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
         UD["avg_glucose_level"],
     ]])
 
-    # Compute SHAP values only once per model
-    @st.cache_resource
-    def get_explainer(mdl):
-        return shap.TreeExplainer(mdl)
-
-    explainer = get_explainer(model)
     shap_vals = explainer.shap_values(X)[1][0]   # class-1 contributions
     raw8     = shap_vals[:8]
     abs8     = np.abs(raw8)
-    contrib  = abs8 / abs8.sum() * prob        # scale so the eight bars sum to total risk
+    contrib  = abs8 / abs8.sum() * prob        # ensure eight bars sum to total risk
 
     feature_names = [
         "Heart Disease", "Hypertension", "Ever Married",
@@ -88,7 +90,7 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
         "Age", "Avg Glucose"
     ]
 
-    # Plot with Plotly so it’s interactive & responsive
+    # Interactive Plotly bar chart
     fig = go.Figure(
         go.Bar(
             x=feature_names,
@@ -140,6 +142,7 @@ st.markdown("""
     <p style="font-size:12px; margin-top:10px;">Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
+
 
 
 
