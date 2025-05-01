@@ -1,19 +1,22 @@
 import streamlit as st
 import pandas as pd
-import joblib, os
+import joblib, os, sys
 
-# ── 1️⃣  Make the helper available for un-pickling ────────────────────────────
+# ── Make feature-engineering helper visible to the un-pickler ────────────────
 def engineer_feats(df):
     df = df.copy()
     df["age_sq"]      = df["age"]**2
     df["glucose_sq"]  = df["avg_glucose_level"]**2
     df["age_glucose"] = df["age"] * df["avg_glucose_level"]
     return df
+
+import __main__                       # ensure joblib finds the symbol
+setattr(__main__, "engineer_feats", engineer_feats)
 # ──────────────────────────────────────────────────────────────────────────────
 
 # ── Page config & CSS ─────────────────────────────────────────────────────────
 st.set_page_config(page_title="Stroke Risk Assessment", layout="wide")
-_ = st.markdown("""
+st.markdown("""
   <style>
     #MainMenu, footer, header{visibility:hidden;}
     [data-testid="stSidebar"],[data-testid="collapsedControl"]{display:none;}
@@ -21,8 +24,8 @@ _ = st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Title & Navbar ───────────────────────────────────────────────────────────
-_ = st.title("📝 Stroke Risk Assessment")
-_ = st.markdown("""
+st.title("📝 Stroke Risk Assessment")
+st.markdown("""
   <style>
     .custom-nav{background:#e8f5e9;padding:15px 0;border-radius:10px;
                 display:flex;justify-content:center;gap:60px;margin-bottom:30px;
@@ -36,14 +39,13 @@ _ = st.markdown("""
   </div>
 """, unsafe_allow_html=True)
 
-# ── Load full preprocessing+model pipeline ───────────────────────────────────
+# ── Load pipeline ────────────────────────────────────────────────────────────
 @st.cache_resource
 def load_pipeline():
-    pipe_path = os.path.join(os.path.dirname(__file__), "stroke_stacking_pipeline.pkl")
-    if not os.path.exists(pipe_path):
-        st.error(f"❌ Pipeline not found at {pipe_path}")
-        st.stop()
-    return joblib.load(pipe_path)
+    path = os.path.join(os.path.dirname(__file__), "stroke_stacking_pipeline.pkl")
+    if not os.path.exists(path):
+        st.error(f"❌ Pipeline not found at {path}"); st.stop()
+    return joblib.load(path)
 
 pipeline = load_pipeline()
 
@@ -64,18 +66,17 @@ with st.expander("🩺 Health Information", expanded=True):
                                   ["Select option","never smoked","formerly smoked","smokes"])
 
 # ── Consent ──────────────────────────────────────────────────────────────────
-_ = st.markdown("### 📄 Consent and Disclaimer")
-_ = st.write("This tool provides an estimate of stroke risk based on the information you provide. "
-             "It is not a diagnostic tool and should not replace professional medical advice.")
+st.markdown("### 📄 Consent and Disclaimer")
+st.write("This tool provides an estimate of stroke risk based on the information you provide. "
+         "It is not a diagnostic tool and should not replace professional medical advice.")
 agreed = st.checkbox("I agree to the terms and allow risk estimation")
 
 # ── Calculate & redirect ─────────────────────────────────────────────────────
 if st.button("Calculate Stroke Risk 📈"):
-    selections = [gender, ever_married, work_type,
-                  hypertension, heart_disease, smoking_status]
     if not agreed:
         st.error("You must agree to the terms before proceeding.")
-    elif any(opt.startswith("Select") for opt in selections):
+    elif any(x.startswith("Select") for x in
+             [gender, ever_married, work_type, hypertension, heart_disease, smoking_status]):
         st.error("Please complete all fields before submitting.")
     else:
         user_data = {
@@ -88,17 +89,16 @@ if st.button("Calculate Stroke Risk 📈"):
             "work_type":        work_type,
             "smoking_status":   smoking_status
         }
-        X_df = pd.DataFrame([user_data])
-        prob = float(pipeline.predict_proba(X_df)[0, 1])          # decimal 0–1
+        prob = float(pipeline.predict_proba(pd.DataFrame([user_data]))[0, 1])
 
-        st.session_state.user_data        = user_data
-        st.session_state.prediction_prob  = prob
+        st.session_state.user_data       = user_data
+        st.session_state.prediction_prob = prob
 
         st.success("Prediction complete! Redirecting to results …")
         st.switch_page("pages/Results.py")
 
-# ── Footer (unchanged) ───────────────────────────────────────────────────────
-_ = st.markdown("""
+# ── Footer ───────────────────────────────────────────────────────────────────
+st.markdown("""
   <style>
     .custom-footer{background:rgba(76,157,112,0.6);color:white;padding:30px 0;
                    border-radius:12px;margin-top:40px;text-align:center;font-size:14px;}
@@ -107,11 +107,14 @@ _ = st.markdown("""
   </style>
   <div class='custom-footer'>
     <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
-    <p><a href='/Home'>Home</a><a href='/Risk_Assessment'>Risk Assessment</a>
-       <a href='/Results'>Results</a><a href='/Recommendations'>Recommendations</a></p>
+    <p>
+      <a href='/Home'>Home</a><a href='/Risk_Assessment'>Risk Assessment</a>
+      <a href='/Results'>Results</a><a href='/Recommendations'>Recommendations</a>
+    </p>
     <p style='font-size:12px;margin-top:10px;'>Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
+
 
 
 
