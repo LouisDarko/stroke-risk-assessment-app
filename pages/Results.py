@@ -1,18 +1,8 @@
 import streamlit as st
-import os, joblib, numpy as np, shap, plotly.graph_objects as go, pandas as pd
-import __main__                            # needed to register helper
+import os, joblib, shap, plotly.graph_objects as go, pandas as pd, numpy as np
+import feutils                                # ensures engineer_feats is importable
 
-# ── make helper visible for un-pickling ─────────────────────────────
-def engineer_feats(df):
-    df = df.copy()
-    df["age_sq"]      = df["age"]**2
-    df["glucose_sq"]  = df["avg_glucose_level"]**2
-    df["age_glucose"] = df["age"] * df["avg_glucose_level"]
-    return df
-setattr(__main__, "engineer_feats", engineer_feats)
-# ────────────────────────────────────────────────────────────────────
-
-# ─────────────── Page config & CSS ─────────────────────────────────
+# ───────────────────────── Page config & CSS ─────────────────────────
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
 st.markdown("""
   <style>
@@ -20,7 +10,7 @@ st.markdown("""
     [data-testid="stSidebar"],[data-testid="collapsedControl"]{display:none;}
   </style>""", unsafe_allow_html=True)
 
-# ─────────────── Title & Navbar ────────────────────────────────────
+# ───────────────────────── Title & Navbar ────────────────────────────
 st.title("📊 Stroke Risk Results")
 st.markdown("""
   <style>
@@ -35,31 +25,27 @@ st.markdown("""
     <a href='/Results'>Results</a><a href='/Recommendations'>Recommendations</a>
   </div>""", unsafe_allow_html=True)
 
-# ─────────────── Load pipeline & explainer ─────────────────────────
+# ─────────────────────── Load pipeline & explainer ──────────────────
 @st.cache_resource
 def load_pipeline():
-    # make sure helper exists before un-pickling
-    import __main__
-    setattr(__main__, "engineer_feats", engineer_feats)
-
     path = os.path.join(os.path.dirname(__file__), "stroke_stacking_pipeline.pkl")
     if not os.path.exists(path):
-        st.error(f"⚠️ Pipeline file not found at {path}"); st.stop()
+        st.error(f"Pipeline not found at {path}"); st.stop()
     return joblib.load(path)
-
 
 model = load_pipeline()
 
 @st.cache_resource
 def get_explainer(_m):
+    """Use TreeExplainer if possible; else fall back to permutation."""
     try:
-        return shap.TreeExplainer(_m)          # fast for pure tree models
+        return shap.TreeExplainer(_m)
     except shap.utils._exceptions.InvalidModelError:
         return shap.Explainer(_m, algorithm="permutation")
 
 explainer = get_explainer(model)
 
-# ─────────────── Main section ──────────────────────────────────────
+# ─────────────────────────── Main section ───────────────────────────
 if {"user_data", "prediction_prob"} <= st.session_state.keys():
     ud        = st.session_state.user_data
     prob_raw  = float(st.session_state.prediction_prob)
@@ -72,33 +58,35 @@ if {"user_data", "prediction_prob"} <= st.session_state.keys():
 
     X_df = pd.DataFrame([ud])
 
-    feature_display = ["Heart Disease","Hypertension","Ever Married",
-                       "Smoking Status","Work Type","Gender","Age","Avg Glucose"]
-    palette = ["#A52A2A","#FFD700","#4682B4","#800080"]
-    colors  = [palette[i % 4] for i in range(8)]
+    # ── SHAP contributions ─────────────────────────────────────────
+    shap_vals  = explainer(X_df)
+    base_names = list(ud.keys())          # 8 original fields
+    palette    = ["#A52A2A","#FFD700","#4682B4","#800080"]
+    colors     = [palette[i % 4] for i in range(len(base_names))]
 
-    if pct_disp == 0.00:
-        contrib = np.zeros(8)
+    if pct_disp == 0:
+        contrib = np.zeros(len(base_names))
     else:
-        shap_vals = explainer(X_df)
-        raw8      = shap_vals.values[0][:8]
-        abs8      = np.abs(raw8)
-        contrib   = abs8 / abs8.sum() * prob_raw
+        raw     = shap_vals.values[0][:len(base_names)]
+        contrib = np.abs(raw) / np.abs(raw).sum() * prob_raw
 
     fig = go.Figure(go.Bar(
-        x=feature_display,
+        x=base_names,
         y=contrib * 100,
         marker=dict(color=colors),
         text=[f"{v*100:.2f}%" for v in contrib],
         textposition="auto",
         hovertemplate="<b>%{x}</b><br>Contribution: %{y:.2f}%<extra></extra>"
     ))
-    fig.update_layout(title="How Each Input Contributed to Your Total Risk",
-                      yaxis=dict(title="Contribution to Risk (%)", rangemode="tozero"),
-                      xaxis=dict(tickangle=-45),
-                      margin=dict(t=60, b=120))
+    fig.update_layout(
+        title="How Each Input Contributed to Your Total Risk",
+        yaxis=dict(title="Contribution to Risk (%)", rangemode="tozero"),
+        xaxis=dict(tickangle=-45),
+        margin=dict(t=60, b=120)
+    )
     st.plotly_chart(fig, use_container_width=True)
 
+    # Navigation buttons
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🔙 Back to Risk Assessment"):
@@ -109,7 +97,7 @@ if {"user_data", "prediction_prob"} <= st.session_state.keys():
 else:
     st.warning("No input data found. Please complete the Risk Assessment first.")
 
-# ─────────────── Footer ────────────────────────────────────────────
+# ─────────────────────────── Footer ────────────────────────────────
 st.markdown("""
   <style>
     .custom-footer{background:rgba(76,157,112,0.6);color:white;padding:30px 0;
@@ -125,6 +113,7 @@ st.markdown("""
     </p>
     <p style='font-size:12px;margin-top:10px;'>Developed by Victoria Mends</p>
   </div>""", unsafe_allow_html=True)
+
 
 
 
