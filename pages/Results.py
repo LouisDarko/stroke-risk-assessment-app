@@ -1,5 +1,6 @@
 import streamlit as st
 import os, joblib, numpy as np, shap, plotly.graph_objects as go
+import pandas as pd
 
 # ───────────────────────── Page config & CSS ─────────────────────────
 _ = st.set_page_config(page_title="Stroke Risk Results", layout="wide")
@@ -10,8 +11,8 @@ _ = st.markdown("""
   </style>""", unsafe_allow_html=True)
 
 # ───────────────────────── Title & Navbar ────────────────────────────
-_ = st.title("📊 Stroke Risk Results")
-_ = st.markdown("""
+st.title("📊 Stroke Risk Results")
+st.markdown("""
   <style>
     .custom-nav{background:#e8f5e9;padding:15px 0;border-radius:10px;
                 display:flex;justify-content:center;gap:60px;margin-bottom:30px;
@@ -35,9 +36,9 @@ def load_pipeline():
 model = load_pipeline()
 
 @st.cache_resource
-def get_explainer(_model):
-    # permutation works for any sklearn model, incl. StackingClassifier
-    return shap.Explainer(_model, algorithm="permutation")
+def get_explainer(_m):
+    # permutation algorithm works with any sklearn estimator
+    return shap.Explainer(_m, algorithm="permutation")
 
 explainer = get_explainer(model)
 
@@ -52,11 +53,9 @@ if {"user_data", "prediction_prob"} <= st.session_state.keys():
     st.warning("⚠️ Higher Risk of Stroke Detected") if prob_raw > 0.5 else \
         st.success("✔️ Lower Risk of Stroke Detected")
 
-    # ── Build a one-row DataFrame exactly like Risk page used ──────────
-    import pandas as pd
+    # One-row DataFrame for SHAP
     X_df = pd.DataFrame([ud])
 
-    # ── Compute SHAP contributions (permutation) ──────────────────────
     feature_display = ["Heart Disease","Hypertension","Ever Married",
                        "Smoking Status","Work Type","Gender","Age","Avg Glucose"]
     palette = ["#A52A2A","#FFD700","#4682B4","#800080"]
@@ -65,12 +64,12 @@ if {"user_data", "prediction_prob"} <= st.session_state.keys():
     if pct_disp == 0.00:
         contrib = np.zeros(8)
     else:
-        shap_vals = explainer(X_df)              # 1-row Explanation object
-        raw8      = shap_vals.values[0][:8]      # first 8 feature columns
+        shap_vals = explainer(X_df)
+        raw8      = shap_vals.values[0][:8]
         abs8      = np.abs(raw8)
         contrib   = abs8 / abs8.sum() * prob_raw
 
-    # ── Bar chart ─────────────────────────────────────────────────────
+    # ── Plotly bar chart ─────────────────────────────────────────────
     fig = go.Figure(go.Bar(
         x=feature_display,
         y=contrib * 100,
@@ -85,7 +84,7 @@ if {"user_data", "prediction_prob"} <= st.session_state.keys():
         xaxis=dict(tickangle=-45), margin=dict(t=60, b=120))
     st.plotly_chart(fig, use_container_width=True)
 
-    # ── Navigation buttons ────────────────────────────────────────────
+    # ── Navigation buttons ──────────────────────────────────────────
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🔙 Back to Risk Assessment"):
@@ -112,8 +111,6 @@ st.markdown("""
     </p>
     <p style='font-size:12px;margin-top:10px;'>Developed by Victoria Mends</p>
   </div>""", unsafe_allow_html=True)
-
-
 
 
 
