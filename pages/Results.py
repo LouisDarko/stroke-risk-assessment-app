@@ -28,10 +28,12 @@ st.markdown("""
 # ─────────────────────── Load pipeline & explainer ──────────────────
 @st.cache_resource
 def load_pipeline():
+    import feutils, __main__
+    setattr(__main__, "engineer_feats", feutils.engineer_feats)
+
     path = os.path.join(os.path.dirname(__file__), "stroke_stacking_pipeline.pkl")
-    if not os.path.exists(path):
-        st.error(f"Pipeline not found at {path}"); st.stop()
     return joblib.load(path)
+
 
 model = load_pipeline()
 
