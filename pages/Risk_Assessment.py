@@ -1,29 +1,17 @@
 import streamlit as st
 import pandas as pd
-import joblib, os, sys
+import joblib, os, feutils            # ← makes engineer_feats importable
 
-# ── Make feature-engineering helper visible to the un-pickler ────────────────
-def engineer_feats(df):
-    df = df.copy()
-    df["age_sq"]      = df["age"]**2
-    df["glucose_sq"]  = df["avg_glucose_level"]**2
-    df["age_glucose"] = df["age"] * df["avg_glucose_level"]
-    return df
-
-import __main__                       # ensure joblib finds the symbol
-setattr(__main__, "engineer_feats", engineer_feats)
-# ──────────────────────────────────────────────────────────────────────────────
-
-# ── Page config & CSS ─────────────────────────────────────────────────────────
+# ───────────────────────── Page config & CSS ─────────────────────────
 st.set_page_config(page_title="Stroke Risk Assessment", layout="wide")
 st.markdown("""
-  <style>
-    #MainMenu, footer, header{visibility:hidden;}
-    [data-testid="stSidebar"],[data-testid="collapsedControl"]{display:none;}
-  </style>
+    <style>
+      #MainMenu, footer, header {visibility: hidden;}
+      [data-testid="stSidebar"], [data-testid="collapsedControl"] {display: none;}
+    </style>
 """, unsafe_allow_html=True)
 
-# ── Title & Navbar ───────────────────────────────────────────────────────────
+# ───────────────────────── Title & Navbar ────────────────────────────
 st.title("📝 Stroke Risk Assessment")
 st.markdown("""
   <style>
@@ -39,7 +27,7 @@ st.markdown("""
   </div>
 """, unsafe_allow_html=True)
 
-# ── Load pipeline ────────────────────────────────────────────────────────────
+# ──────────────────────── Load pipeline ──────────────────────────────
 @st.cache_resource
 def load_pipeline():
     path = os.path.join(os.path.dirname(__file__), "stroke_stacking_pipeline.pkl")
@@ -49,14 +37,14 @@ def load_pipeline():
 
 pipeline = load_pipeline()
 
-# ── Input form ───────────────────────────────────────────────────────────────
+# ──────────────────────── Input Sections ─────────────────────────────
 with st.expander("👤 Personal Information", expanded=True):
-    age           = st.number_input("Age", 18, 100, 45, 1)
-    gender        = st.selectbox("Gender", ["Select option","Male","Female"])
-    ever_married  = st.selectbox("Ever Married?", ["Select option","Yes","No"])
-    work_type     = st.selectbox("Work Type",
-                                 ["Select option","Private","Self-employed",
-                                  "Govt_job","Never_worked"])
+    age          = st.number_input("Age", 18, 100, 45, step=1)
+    gender       = st.selectbox("Gender", ["Select option","Male","Female"])
+    ever_married = st.selectbox("Ever Married?", ["Select option","Yes","No"])
+    work_type    = st.selectbox("Work Type",
+                                ["Select option","Private","Self-employed",
+                                 "Govt_job","Never_worked"])
 
 with st.expander("🩺 Health Information", expanded=True):
     hypertension   = st.radio("Hypertension",  ["Select option","Yes","No"], horizontal=True)
@@ -65,39 +53,39 @@ with st.expander("🩺 Health Information", expanded=True):
     smoking_status = st.selectbox("Smoking Status",
                                   ["Select option","never smoked","formerly smoked","smokes"])
 
-# ── Consent ──────────────────────────────────────────────────────────────────
+# ───────────────────── Consent & Disclaimer ──────────────────────────
 st.markdown("### 📄 Consent and Disclaimer")
-st.write("This tool provides an estimate of stroke risk based on the information you provide. "
-         "It is not a diagnostic tool and should not replace professional medical advice.")
+st.write(
+    "This tool provides an estimate of stroke risk based on the information you provide. "
+    "It is not a diagnostic tool and should not replace professional medical advice."
+)
 agreed = st.checkbox("I agree to the terms and allow risk estimation")
 
-# ── Calculate & redirect ─────────────────────────────────────────────────────
+# ─────────────────────── Calculate & Redirect ───────────────────────
 if st.button("Calculate Stroke Risk 📈"):
     if not agreed:
         st.error("You must agree to the terms before proceeding.")
     elif any(x.startswith("Select") for x in
              [gender, ever_married, work_type, hypertension, heart_disease, smoking_status]):
-        st.error("Please complete all fields before submitting.")
+        st.error("Please complete all fields.")
     else:
         user_data = {
-            "gender":           gender,
-            "age":              age,
+            "gender":            gender,
+            "age":               age,
             "avg_glucose_level": avg_glucose,
-            "hypertension":     hypertension,
-            "heart_disease":    heart_disease,
-            "ever_married":     ever_married,
-            "work_type":        work_type,
-            "smoking_status":   smoking_status
+            "hypertension":      hypertension,
+            "heart_disease":     heart_disease,
+            "ever_married":      ever_married,
+            "work_type":         work_type,
+            "smoking_status":    smoking_status
         }
         prob = float(pipeline.predict_proba(pd.DataFrame([user_data]))[0, 1])
 
         st.session_state.user_data       = user_data
         st.session_state.prediction_prob = prob
-
-        st.success("Prediction complete! Redirecting to results …")
         st.switch_page("pages/Results.py")
 
-# ── Footer ───────────────────────────────────────────────────────────────────
+# ─────────────────────────── Footer ────────────────────────────────
 st.markdown("""
   <style>
     .custom-footer{background:rgba(76,157,112,0.6);color:white;padding:30px 0;
@@ -106,14 +94,15 @@ st.markdown("""
     .custom-footer a:hover{text-decoration:underline;}
   </style>
   <div class='custom-footer'>
-    <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
-    <p>
-      <a href='/Home'>Home</a><a href='/Risk_Assessment'>Risk Assessment</a>
-      <a href='/Results'>Results</a><a href='/Recommendations'>Recommendations</a>
-    </p>
-    <p style='font-size:12px;margin-top:10px;'>Developed by Victoria Mends</p>
+      <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
+      <p>
+        <a href='/Home'>Home</a><a href='/Risk_Assessment'>Risk Assessment</a>
+        <a href='/Results'>Results</a><a href='/Recommendations'>Recommendations</a>
+      </p>
+      <p style='font-size:12px;'>Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
+
 
 
 
