@@ -28,7 +28,7 @@ _ = st.markdown("""
   </div>
 """, unsafe_allow_html=True)
 
-# ──────────────────────── Load model & explainer ─────────────────────
+# ──────────────────────── Load model & SHAP explainer ─────────────────────
 @st.cache_resource
 def load_model():
     path = os.path.join(os.path.dirname(__file__), "best_stacking_model.pkl")
@@ -45,59 +45,61 @@ def get_explainer(_model):     # leading underscore → skip hashing
 explainer = get_explainer(model)
 
 # ─────────────────────────── Main section ────────────────────────────
-if {"user_data", "prediction_prob"} <= st.session_state.keys():
-    prob_raw    = float(st.session_state.prediction_prob)        # 0‒1
-    pct_disp    = round(prob_raw * 100, 2)                       # two-decimal %
+required_keys = {"user_data", "prediction_prob"}
+if required_keys <= st.session_state.keys():
+    ud        = st.session_state.user_data
+    prob_raw  = float(st.session_state.prediction_prob)     # already computed in previous page
+    pct_disp  = round(prob_raw * 100, 2)                    # two-decimal %
 
     _ = st.header("🧠 Stroke Percentage Risk")
     _ = st.write(f"Based on your inputs, your estimated risk is **{pct_disp:.2f}%**")
     _ = st.warning("⚠️ Higher Risk of Stroke Detected") if prob_raw > 0.5 else \
         st.success("✔️ Lower Risk of Stroke Detected")
 
-    # Feature names & colour palette
-    feature_names = ["Heart Disease","Hypertension","Ever Married",
-                     "Smoking Status","Work Type","Gender","Age","Avg Glucose"]
-    palette = ["#A52A2A","#FFD700","#4682B4","#800080"]          # brown, gold, steel-blue, purple
+    # ── Build feature vector for SHAP (same order as training) ────────────
+    age, glu = ud["age"], ud["avg_glucose_level"]
+    X = np.array([[
+        {"Yes": 1, "No": 0}[ud["heart_disease"]],
+        {"Yes": 1, "No": 0}[ud["hypertension"]],
+        {"Yes": 1, "No": 0}[ud["ever_married"]],
+        {"never smoked": 0, "formerly smoked": 1, "smokes": 2}[ud["smoking_status"]],
+        {"Private": 0, "Self-employed": 1, "Govt_job": 2, "Never_worked": 3}[ud["work_type"]],
+        {"Male": 0, "Female": 1}[ud["gender"]],
+        age, glu, age**2, age * glu, glu**2
+    ]])
+
+    # ── SHAP contributions ───────────────────────────────────────────────
+    feature_names = ["Heart Disease", "Hypertension", "Ever Married",
+                     "Smoking Status", "Work Type", "Gender", "Age", "Avg Glucose"]
+    palette = ["#A52A2A", "#FFD700", "#4682B4", "#800080"]   # brown, gold, steel-blue, purple
     colors  = [palette[i % 4] for i in range(8)]
 
-    # Contributions: flatten bars if rounded display is 0.00 %
-    if pct_disp == 0.00:
+    if pct_disp == 0.00:                                    # flatten bars if rounded 0 %
         contrib = np.zeros(len(feature_names))
     else:
-        ud = st.session_state.user_data
-        age, glu = ud["age"], ud["avg_glucose_level"]
-        x_full = np.array([[
-            {"Yes":1,"No":0}[ud["heart_disease"]],
-            {"Yes":1,"No":0}[ud["hypertension"]],
-            {"Yes":1,"No":0}[ud["ever_married"]],
-            {"never smoked":0,"formerly smoked":1,"smokes":2}[ud["smoking_status"]],
-            {"Private":0,"Self-employed":1,"Govt_job":2,"Never_worked":3}[ud["work_type"]],
-            {"Male":0,"Female":1}[ud["gender"]],
-            age, glu, age**2, age*glu, glu**2
-        ]])
-        sv         = explainer.shap_values(x_full)
+        sv         = explainer.shap_values(X)
         shap_vals  = sv[1][0] if isinstance(sv, list) else sv[0]
         abs8       = np.abs(shap_vals[:8])
         contrib    = abs8 / abs8.sum() * prob_raw
 
-    # ───── Plotly bar chart ─────
+    # ── Plotly bar chart ─────────────────────────────────────────────────
     fig = go.Figure(go.Bar(
-        x     = feature_names,
-        y     = contrib * 100,
+        x=feature_names,
+        y=contrib * 100,
         marker=dict(color=colors),
-        text  =[f"{v*100:.2f}%" for v in contrib],
+        text=[f"{v*100:.2f}%" for v in contrib],
         textposition="auto",
         hovertemplate="<b>%{x}</b><br>Contribution: %{y:.2f}%<extra></extra>"
     ))
     fig.update_layout(
-        title ="How Each Input Contributed to Your Total Risk",
-        yaxis =dict(title="Contribution to Risk (%)", rangemode="tozero"),
-        xaxis =dict(tickangle=-45),
+        title="How Each Input Contributed to Your Total Risk",
+        yaxis=dict(title="Contribution to Risk (%)", rangemode="tozero"),
+        xaxis=dict(tickangle=-45),
         margin=dict(t=60, b=120)
     )
     _ = st.plotly_chart(fig, use_container_width=True)
 
-    # Navigation buttons
+    # ── Navigation buttons ──────────────────────────────────────────────
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🔙 Back to Risk Assessment"):
