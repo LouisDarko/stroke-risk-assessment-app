@@ -4,7 +4,7 @@ import base64
 
 import sys, __main__            # NEW
 
-# --- helper required by the pickled pipeline -----------------
+# --- make engineer_feats available to every page ------------------
 def engineer_feats(df):
     df = df.copy()
     df["age_sq"]      = df["age"]**2
@@ -12,8 +12,11 @@ def engineer_feats(df):
     df["age_glucose"] = df["age"] * df["avg_glucose_level"]
     return df
 
-setattr(__main__, "engineer_feats", engineer_feats)  # register on __main__
-# --------------------------------------------------------------
+import __main__
+setattr(__main__, "engineer_feats", engineer_feats)
+# ------------------------------------------------------------------
+
+
 
 
 # Set page configuration
