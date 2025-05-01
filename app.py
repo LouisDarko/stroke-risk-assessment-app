@@ -2,6 +2,20 @@ import streamlit as st
 from gtts import gTTS
 import base64
 
+import sys, __main__            # NEW
+
+# --- helper required by the pickled pipeline -----------------
+def engineer_feats(df):
+    df = df.copy()
+    df["age_sq"]      = df["age"]**2
+    df["glucose_sq"]  = df["avg_glucose_level"]**2
+    df["age_glucose"] = df["age"] * df["avg_glucose_level"]
+    return df
+
+setattr(__main__, "engineer_feats", engineer_feats)  # register on __main__
+# --------------------------------------------------------------
+
+
 # Set page configuration
 st.set_page_config(page_title="Stroke Risk Prediction", layout="wide")
 
