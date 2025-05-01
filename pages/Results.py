@@ -1,30 +1,24 @@
 import streamlit as st
-import os
-import joblib
-import numpy as np
-import shap
-import plotly.graph_objects as go
+import os, joblib, numpy as np, shap, plotly.graph_objects as go
 
 # ── Page config & hide defaults ────────────────────────────────────────────────
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
 st.markdown("""
-    <style>
-      #MainMenu, footer, header {visibility: hidden;}
-      [data-testid="stSidebar"], [data-testid="collapsedControl"] {display: none;}
-    </style>
+  <style>
+    #MainMenu, footer, header {visibility: hidden;}
+    [data-testid="stSidebar"], [data-testid="collapsedControl"] {display: none;}
+  </style>
 """, unsafe_allow_html=True)
 
 # ── Title & Navbar ─────────────────────────────────────────────────────────────
 st.title("📊 Stroke Risk Results")
 st.markdown("""
   <style>
-    .custom-nav {
-      background: #e8f5e9; padding: 15px 0; border-radius: 10px;
-      display: flex; justify-content: center; gap: 60px; margin-bottom: 30px;
-      font-size: 18px; font-weight: 600;
-    }
-    .custom-nav a { text-decoration: none; color: #4C9D70; }
-    .custom-nav a:hover { color: #388e3c; text-decoration: underline; }
+    .custom-nav{background:#e8f5e9;padding:15px 0;border-radius:10px;
+                display:flex;justify-content:center;gap:60px;margin-bottom:30px;
+                font-size:18px;font-weight:600;}
+    .custom-nav a{text-decoration:none;color:#4C9D70;}
+    .custom-nav a:hover{text-decoration:underline;color:#388e3c;}
   </style>
   <div class="custom-nav">
     <a href='/Home'>Home</a>
@@ -34,90 +28,67 @@ st.markdown("""
   </div>
 """, unsafe_allow_html=True)
 
-# ── Load trained model ─────────────────────────────────────────────────────────
+# ── Load model & SHAP explainer ────────────────────────────────────────────────
 @st.cache_resource
 def load_model():
-    base = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.join(base, "best_gb_model.pkl")
-    if not os.path.exists(model_path):
-        st.error(f"⚠️ Model file not found at:\n`{model_path}`")
-        st.stop()
-    return joblib.load(model_path)
+    path = os.path.join(os.path.dirname(__file__), "best_gb_model.pkl")
+    if not os.path.exists(path):
+        st.error(f"⚠️ Model file not found at `{path}`"); st.stop()
+    return joblib.load(path)
 
 model = load_model()
 
-# ── Compute SHAP explainer once ────────────────────────────────────────────────
 @st.cache_resource
-def get_explainer(_mdl):
-    return shap.TreeExplainer(_mdl)
-
+def get_explainer(m): return shap.TreeExplainer(m)
 explainer = get_explainer(model)
 
-# ── Display results & SHAP-based contributions ─────────────────────────────────
-if "user_data" in st.session_state and "prediction_prob" in st.session_state:
-    prob = float(st.session_state.prediction_prob)
+# ── Main section ───────────────────────────────────────────────────────────────
+if {"user_data", "prediction_prob"} <= st.session_state.keys():
+    prob_raw = float(st.session_state.prediction_prob)   # 0‒1
+    pct_rounded = round(prob_raw * 100, 2)               # two-decimal %
 
+    # ── Display headline ────────────────────────────────────────────────────
     st.header("🧠 Stroke Percentage Risk")
-    st.write(f"Based on your inputs, your estimated risk is **{prob*100:.2f}%**")
+    st.write(f"Based on your inputs, your estimated risk is **{pct_rounded:.2f}%**")
 
-    if prob > 0.5:
-        st.warning("⚠️ Higher Risk of Stroke Detected")
-    else:
+    st.warning("⚠️ Higher Risk of Stroke Detected") if prob_raw > 0.5 else \
         st.success("✔️ Lower Risk of Stroke Detected")
 
-    # ── Reconstruct full 11-feature input ────────────────────────────────────
-    UD = st.session_state.user_data
-    age = UD["age"]
-    glu = UD["avg_glucose_level"]
-    age_sq = age ** 2
-    interaction = age * glu
-    glu_sq = glu ** 2
+    # ── Feature list & colour palette ───────────────────────────────────────
+    feature_names = ["Heart Disease","Hypertension","Ever Married",
+                     "Smoking Status","Work Type","Gender","Age","Avg Glucose"]
+    palette = ["#A52A2A","#FFD700","#4682B4","#800080"]   # brown, gold, steel blue, purple
+    colors  = [palette[i % 4] for i in range(8)]
 
-    full_X = np.array([[
-        {"Yes": 1, "No": 0}[UD["heart_disease"]],
-        {"Yes": 1, "No": 0}[UD["hypertension"]],
-        {"Yes": 1, "No": 0}[UD["ever_married"]],
-        {"never smoked": 0, "formerly smoked": 1, "smokes": 2}[UD["smoking_status"]],
-        {"Private": 0, "Self-employed": 1, "Govt_job": 2, "Never_worked": 3}[UD["work_type"]],
-        {"Male": 0, "Female": 1}[UD["gender"]],
-        age, glu, age_sq, interaction, glu_sq
-    ]])
-
-    feature_names = [
-        "Heart Disease", "Hypertension", "Ever Married",
-        "Smoking Status", "Work Type", "Gender",
-        "Age", "Avg Glucose"
-    ]
-
-    # ── Calculate contributions ──────────────────────────────────────────────
-    if prob == 0:
-        # Directly set all contributions to zero to avoid divide-by-zero issues
+    # ── Determine contributions ────────────────────────────────────────────
+    if pct_rounded == 0.00:                                # flattened bars rule
         contrib = np.zeros(len(feature_names))
     else:
-        sv = explainer.shap_values(full_X)
-        shap_vals_full = sv[1][0] if isinstance(sv, list) else sv[0]
-        raw8 = shap_vals_full[:8]
-        abs8 = np.abs(raw8)
-        contrib = abs8 / abs8.sum() * prob  # proportional share, scaled by risk
+        ud = st.session_state.user_data
+        age, glu = ud["age"], ud["avg_glucose_level"]
+        x_full = np.array([[
+            {"Yes":1,"No":0}[ud["heart_disease"]],
+            {"Yes":1,"No":0}[ud["hypertension"]],
+            {"Yes":1,"No":0}[ud["ever_married"]],
+            {"never smoked":0,"formerly smoked":1,"smokes":2}[ud["smoking_status"]],
+            {"Private":0,"Self-employed":1,"Govt_job":2,"Never_worked":3}[ud["work_type"]],
+            {"Male":0,"Female":1}[ud["gender"]],
+            age, glu, age**2, age*glu, glu**2
+        ]])
+        sv = explainer.shap_values(x_full)
+        shap_vals = sv[1][0] if isinstance(sv, list) else sv[0]
+        abs8 = np.abs(shap_vals[:8])
+        contrib = abs8 / abs8.sum() * prob_raw
 
-    # ── Custom four-colour palette (cycles) ──────────────────────────────────
-    palette = ["#A52A2A",  # brown
-               "#FFD700",  # gold
-               "#4682B4",  # steel blue
-               "#800080"]  # purple
-    colors = [palette[i % len(palette)] for i in range(len(feature_names))]
-
-    # ── Plotly bar chart ─────────────────────────────────────────────────────
-    fig = go.Figure(
-        go.Bar(
-            x=feature_names,
-            y=contrib * 100,                # convert to percentage
-            marker=dict(color=colors),
-            text=[f"{v*100:.2f}%" for v in contrib],
-            textposition="auto",
-            hovertemplate="<b>%{x}</b><br>Contribution: %{y:.2f}%<extra></extra>"
-        )
-    )
+    # ── Plotly bar chart ───────────────────────────────────────────────────
+    fig = go.Figure(go.Bar(
+        x=feature_names,
+        y=contrib * 100,
+        marker=dict(color=colors),
+        text=[f"{v*100:.2f}%" for v in contrib],
+        textposition="auto",
+        hovertemplate="<b>%{x}</b><br>Contribution: %{y:.2f}%<extra></extra>"
+    ))
     fig.update_layout(
         title="How Each Input Contributed to Your Total Risk",
         yaxis=dict(title="Contribution to Risk (%)", rangemode="tozero"),
@@ -126,7 +97,7 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # ── Navigation Buttons ──────────────────────────────────────────────────
+    # ── Navigation buttons ─────────────────────────────────────────────────
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🔙 Back to Risk Assessment"):
@@ -134,27 +105,23 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     with col2:
         if st.button("📘 Go to Recommendations"):
             st.switch_page("pages/Recommendations.py")
-
 else:
     st.warning("No input data found. Please complete the Risk Assessment first.")
 
-# ── Footer ────────────────────────────────────────────────────────────────────
+# ── Footer ───────────────────────────────────────────────────────────────────
 st.markdown("""
   <style>
-    .custom-footer { background-color: rgba(76,157,112,0.6); color: white;
-      padding: 30px 0; border-radius: 12px; margin-top: 40px;
-      text-align: center; font-size: 14px; width: 100%; }
-    .custom-footer a { color: white; text-decoration: none; margin: 0 15px; }
-    .custom-footer a:hover { text-decoration: underline; }
+    .custom-footer{background:rgba(76,157,112,0.6);color:white;padding:30px 0;
+                   border-radius:12px;margin-top:40px;text-align:center;font-size:14px;}
+    .custom-footer a{color:white;text-decoration:none;margin:0 15px;}
+    .custom-footer a:hover{text-decoration:underline;}
   </style>
-  <div class="custom-footer">
+  <div class='custom-footer'>
     <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
     <p>
-      <a href='/Home'>Home</a>
-      <a href='/Risk_Assessment'>Risk Assessment</a>
-      <a href='/Results'>Results</a>
-      <a href='/Recommendations'>Recommendations</a>
+      <a href='/Home'>Home</a><a href='/Risk_Assessment'>Risk Assessment</a>
+      <a href='/Results'>Results</a><a href='/Recommendations'>Recommendations</a>
     </p>
-    <p style="font-size:12px; margin-top:10px;">Developed by Victoria Mends</p>
+    <p style='font-size:12px;margin-top:10px;'>Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
