@@ -1,9 +1,17 @@
 import streamlit as st
 import pandas as pd
-import joblib
-import os
+import joblib, os
 
-# ───────────────────────── Page config & CSS ─────────────────────────
+# ── 1️⃣  Make the helper available for un-pickling ────────────────────────────
+def engineer_feats(df):
+    df = df.copy()
+    df["age_sq"]      = df["age"]**2
+    df["glucose_sq"]  = df["avg_glucose_level"]**2
+    df["age_glucose"] = df["age"] * df["avg_glucose_level"]
+    return df
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ── Page config & CSS ─────────────────────────────────────────────────────────
 st.set_page_config(page_title="Stroke Risk Assessment", layout="wide")
 _ = st.markdown("""
   <style>
@@ -12,7 +20,7 @@ _ = st.markdown("""
   </style>
 """, unsafe_allow_html=True)
 
-# ───────────────────── Title & Navbar ─────────────────────
+# ── Title & Navbar ───────────────────────────────────────────────────────────
 _ = st.title("📝 Stroke Risk Assessment")
 _ = st.markdown("""
   <style>
@@ -28,7 +36,7 @@ _ = st.markdown("""
   </div>
 """, unsafe_allow_html=True)
 
-# ───────────────────── Load full pipeline ─────────────────────
+# ── Load full preprocessing+model pipeline ───────────────────────────────────
 @st.cache_resource
 def load_pipeline():
     pipe_path = os.path.join(os.path.dirname(__file__), "stroke_stacking_pipeline.pkl")
@@ -39,29 +47,29 @@ def load_pipeline():
 
 pipeline = load_pipeline()
 
-# ───────────────────── Input form ───────────────────────────
+# ── Input form ───────────────────────────────────────────────────────────────
 with st.expander("👤 Personal Information", expanded=True):
-    age           = st.number_input("Age", 18, 100, 45, 1, format="%d")
-    gender        = st.selectbox("Gender",        ["Select option","Male","Female"])
+    age           = st.number_input("Age", 18, 100, 45, 1)
+    gender        = st.selectbox("Gender", ["Select option","Male","Female"])
     ever_married  = st.selectbox("Ever Married?", ["Select option","Yes","No"])
     work_type     = st.selectbox("Work Type",
                                  ["Select option","Private","Self-employed",
                                   "Govt_job","Never_worked"])
 
 with st.expander("🩺 Health Information", expanded=True):
-    hypertension   = st.radio("Hypertension", ["Select option","Yes","No"], horizontal=True)
+    hypertension   = st.radio("Hypertension",  ["Select option","Yes","No"], horizontal=True)
     heart_disease  = st.radio("Heart Disease", ["Select option","Yes","No"], horizontal=True)
-    avg_glucose    = st.number_input("Average Glucose Level (mg/dL)", 55.0, 400.0, 110.0, 0.1)
+    avg_glucose    = st.number_input("Average Glucose Level (mg/dL)", 55.0, 400.0, 110.0)
     smoking_status = st.selectbox("Smoking Status",
                                   ["Select option","never smoked","formerly smoked","smokes"])
 
-# ───────────────────── Consent ───────────────────────────────
+# ── Consent ──────────────────────────────────────────────────────────────────
 _ = st.markdown("### 📄 Consent and Disclaimer")
 _ = st.write("This tool provides an estimate of stroke risk based on the information you provide. "
              "It is not a diagnostic tool and should not replace professional medical advice.")
 agreed = st.checkbox("I agree to the terms and allow risk estimation")
 
-# ───────────────────── Calculate & redirect ──────────────────
+# ── Calculate & redirect ─────────────────────────────────────────────────────
 if st.button("Calculate Stroke Risk 📈"):
     selections = [gender, ever_married, work_type,
                   hypertension, heart_disease, smoking_status]
@@ -70,7 +78,6 @@ if st.button("Calculate Stroke Risk 📈"):
     elif any(opt.startswith("Select") for opt in selections):
         st.error("Please complete all fields before submitting.")
     else:
-        # Raw input dict – pipeline handles all preprocessing
         user_data = {
             "gender":           gender,
             "age":              age,
@@ -82,7 +89,7 @@ if st.button("Calculate Stroke Risk 📈"):
             "smoking_status":   smoking_status
         }
         X_df = pd.DataFrame([user_data])
-        prob = float(pipeline.predict_proba(X_df)[0, 1])   # decimal 0-1
+        prob = float(pipeline.predict_proba(X_df)[0, 1])          # decimal 0–1
 
         st.session_state.user_data        = user_data
         st.session_state.prediction_prob  = prob
@@ -90,7 +97,7 @@ if st.button("Calculate Stroke Risk 📈"):
         st.success("Prediction complete! Redirecting to results …")
         st.switch_page("pages/Results.py")
 
-# ───────────────────── Footer ────────────────────────────────
+# ── Footer (unchanged) ───────────────────────────────────────────────────────
 _ = st.markdown("""
   <style>
     .custom-footer{background:rgba(76,157,112,0.6);color:white;padding:30px 0;
@@ -100,13 +107,12 @@ _ = st.markdown("""
   </style>
   <div class='custom-footer'>
     <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
-    <p>
-      <a href='/Home'>Home</a><a href='/Risk_Assessment'>Risk Assessment</a>
-      <a href='/Results'>Results</a><a href='/Recommendations'>Recommendations</a>
-    </p>
+    <p><a href='/Home'>Home</a><a href='/Risk_Assessment'>Risk Assessment</a>
+       <a href='/Results'>Results</a><a href='/Recommendations'>Recommendations</a></p>
     <p style='font-size:12px;margin-top:10px;'>Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
+
 
 
 
