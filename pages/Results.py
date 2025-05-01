@@ -1,6 +1,13 @@
 import streamlit as st
 import os, joblib, shap, plotly.graph_objects as go, pandas as pd, numpy as np
-import feutils                                # ensures engineer_feats is importable
+# ensures engineer_feats is importable
+
+# ----- place these THREE lines at the *very top* of the page -------------
+import feutils, __main__
+if not hasattr(__main__, "engineer_feats"):
+    setattr(__main__, "engineer_feats", feutils.engineer_feats)
+# -------------------------------------------------------------------------
+
 
 # ───────────────────────── Page config & CSS ─────────────────────────
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
