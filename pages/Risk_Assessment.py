@@ -1,6 +1,13 @@
 import streamlit as st
 import pandas as pd
-import joblib, os, feutils            # ← makes engineer_feats importable
+import joblib, os          # ← makes engineer_feats importable
+
+# ----- place these THREE lines at the *very top* of the page -------------
+import feutils, __main__
+if not hasattr(__main__, "engineer_feats"):
+    setattr(__main__, "engineer_feats", feutils.engineer_feats)
+# -------------------------------------------------------------------------
+
 
 # ───────────────────────── Page config & CSS ─────────────────────────
 st.set_page_config(page_title="Stroke Risk Assessment", layout="wide")
