@@ -37,10 +37,11 @@ model = load_pipeline()
 
 @st.cache_resource
 def get_explainer(_m):
-    # permutation algorithm works with any sklearn estimator
+    # permutation algorithm works for any sklearn estimator
     return shap.Explainer(_m, algorithm="permutation")
 
 explainer = get_explainer(model)
+
 
 # ─────────────────────────── Main section ───────────────────────────
 if {"user_data", "prediction_prob"} <= st.session_state.keys():
