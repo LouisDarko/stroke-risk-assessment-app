@@ -1,7 +1,9 @@
 import streamlit as st
-import os, joblib, pandas as pd, base64
+import pandas as pd
+import joblib
+import os
 
-# ───────────────────── Page config & CSS ─────────────────────
+# ───────────────────────── Page config & CSS ─────────────────────────
 st.set_page_config(page_title="Stroke Risk Assessment", layout="wide")
 _ = st.markdown("""
   <style>
@@ -10,7 +12,7 @@ _ = st.markdown("""
   </style>
 """, unsafe_allow_html=True)
 
-# ───────────────────── Title & Navbar ────────────────────────
+# ───────────────────── Title & Navbar ─────────────────────
 _ = st.title("📝 Stroke Risk Assessment")
 _ = st.markdown("""
   <style>
@@ -26,28 +28,30 @@ _ = st.markdown("""
   </div>
 """, unsafe_allow_html=True)
 
-# ───────────────────── Load full pipeline ───────────────────
+# ───────────────────── Load full pipeline ─────────────────────
 @st.cache_resource
 def load_pipeline():
-    path = os.path.join(os.path.dirname(__file__), "stroke_stacking_pipeline.pkl")
-    if not os.path.exists(path):
-        st.error(f"Pipeline not found at `{path}`"); st.stop()
-    return joblib.load(path)
+    pipe_path = os.path.join(os.path.dirname(__file__), "stroke_stacking_pipeline.pkl")
+    if not os.path.exists(pipe_path):
+        st.error(f"❌ Pipeline not found at {pipe_path}")
+        st.stop()
+    return joblib.load(pipe_path)
 
 pipeline = load_pipeline()
 
-# ───────────────────── Form inputs ───────────────────────────
+# ───────────────────── Input form ───────────────────────────
 with st.expander("👤 Personal Information", expanded=True):
-    age           = st.number_input("Age", 18, 100, 18, 1, format="%d")
+    age           = st.number_input("Age", 18, 100, 45, 1, format="%d")
     gender        = st.selectbox("Gender",        ["Select option","Male","Female"])
     ever_married  = st.selectbox("Ever Married?", ["Select option","Yes","No"])
-    work_type     = st.selectbox("Work Type",     ["Select option","Private","Self-employed",
-                                                   "Govt_job","Never_worked"])
+    work_type     = st.selectbox("Work Type",
+                                 ["Select option","Private","Self-employed",
+                                  "Govt_job","Never_worked"])
 
 with st.expander("🩺 Health Information", expanded=True):
     hypertension   = st.radio("Hypertension", ["Select option","Yes","No"], horizontal=True)
     heart_disease  = st.radio("Heart Disease", ["Select option","Yes","No"], horizontal=True)
-    avg_glucose    = st.number_input("Average Glucose Level (mg/dL)", 55.0, 400.0, 55.0, 0.1)
+    avg_glucose    = st.number_input("Average Glucose Level (mg/dL)", 55.0, 400.0, 110.0, 0.1)
     smoking_status = st.selectbox("Smoking Status",
                                   ["Select option","never smoked","formerly smoked","smokes"])
 
@@ -55,40 +59,38 @@ with st.expander("🩺 Health Information", expanded=True):
 _ = st.markdown("### 📄 Consent and Disclaimer")
 _ = st.write("This tool provides an estimate of stroke risk based on the information you provide. "
              "It is not a diagnostic tool and should not replace professional medical advice.")
-agree = st.checkbox("I agree to the terms and allow risk estimation")
+agreed = st.checkbox("I agree to the terms and allow risk estimation")
 
 # ───────────────────── Calculate & redirect ──────────────────
 if st.button("Calculate Stroke Risk 📈"):
-    missing = any(x.startswith("Select") for x in
-                  [gender, ever_married, work_type,
-                   hypertension, heart_disease, smoking_status])
-    if not agree:
+    selections = [gender, ever_married, work_type,
+                  hypertension, heart_disease, smoking_status]
+    if not agreed:
         st.error("You must agree to the terms before proceeding.")
-    elif missing:
+    elif any(opt.startswith("Select") for opt in selections):
         st.error("Please complete all fields before submitting.")
     else:
-        # raw input dict (matches pipeline’s expected column names)
+        # Raw input dict – pipeline handles all preprocessing
         user_data = {
-            "gender":          gender,
-            "age":             age,
+            "gender":           gender,
+            "age":              age,
             "avg_glucose_level": avg_glucose,
-            "hypertension":    hypertension,
-            "heart_disease":   heart_disease,
-            "ever_married":    ever_married,
-            "work_type":       work_type,
-            "smoking_status":  smoking_status
+            "hypertension":     hypertension,
+            "heart_disease":    heart_disease,
+            "ever_married":     ever_married,
+            "work_type":        work_type,
+            "smoking_status":   smoking_status
         }
-        X_df = pd.DataFrame([user_data])          # one-row DataFrame
-
-        prob = float(pipeline.predict_proba(X_df)[0, 1])  # decimal 0‒1
+        X_df = pd.DataFrame([user_data])
+        prob = float(pipeline.predict_proba(X_df)[0, 1])   # decimal 0-1
 
         st.session_state.user_data        = user_data
         st.session_state.prediction_prob  = prob
 
-        st.success("Prediction complete! Redirecting …")
+        st.success("Prediction complete! Redirecting to results …")
         st.switch_page("pages/Results.py")
 
-# ───────────────────── Footer (unchanged) ────────────────────
+# ───────────────────── Footer ────────────────────────────────
 _ = st.markdown("""
   <style>
     .custom-footer{background:rgba(76,157,112,0.6);color:white;padding:30px 0;
@@ -97,15 +99,14 @@ _ = st.markdown("""
     .custom-footer a:hover{text-decoration:underline;}
   </style>
   <div class='custom-footer'>
-     <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
-     <p><a href='/Home'>Home</a><a href='/Risk_Assessment'>Risk Assessment</a>
-        <a href='/Results'>Results</a><a href='/Recommendations'>Recommendations</a></p>
-     <p style='font-size:12px;margin-top:10px;'>Developed by Victoria Mends</p>
+    <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
+    <p>
+      <a href='/Home'>Home</a><a href='/Risk_Assessment'>Risk Assessment</a>
+      <a href='/Results'>Results</a><a href='/Recommendations'>Recommendations</a>
+    </p>
+    <p style='font-size:12px;margin-top:10px;'>Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
-
-
-
 
 
 
