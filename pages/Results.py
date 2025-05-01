@@ -1,16 +1,26 @@
 import streamlit as st
-import os, joblib, numpy as np, shap, plotly.graph_objects as go
-import pandas as pd
+import os, joblib, numpy as np, shap, plotly.graph_objects as go, pandas as pd
+import __main__                            # needed to register helper
 
-# ───────────────────────── Page config & CSS ─────────────────────────
-_ = st.set_page_config(page_title="Stroke Risk Results", layout="wide")
-_ = st.markdown("""
+# ── make helper visible for un-pickling ─────────────────────────────
+def engineer_feats(df):
+    df = df.copy()
+    df["age_sq"]      = df["age"]**2
+    df["glucose_sq"]  = df["avg_glucose_level"]**2
+    df["age_glucose"] = df["age"] * df["avg_glucose_level"]
+    return df
+setattr(__main__, "engineer_feats", engineer_feats)
+# ────────────────────────────────────────────────────────────────────
+
+# ─────────────── Page config & CSS ─────────────────────────────────
+st.set_page_config(page_title="Stroke Risk Results", layout="wide")
+st.markdown("""
   <style>
     #MainMenu, footer, header{visibility:hidden;}
     [data-testid="stSidebar"],[data-testid="collapsedControl"]{display:none;}
   </style>""", unsafe_allow_html=True)
 
-# ───────────────────────── Title & Navbar ────────────────────────────
+# ─────────────── Title & Navbar ────────────────────────────────────
 st.title("📊 Stroke Risk Results")
 st.markdown("""
   <style>
@@ -25,7 +35,7 @@ st.markdown("""
     <a href='/Results'>Results</a><a href='/Recommendations'>Recommendations</a>
   </div>""", unsafe_allow_html=True)
 
-# ───────────────────── Load pipeline & SHAP explainer ─────────────────────
+# ─────────────── Load pipeline & explainer ─────────────────────────
 @st.cache_resource
 def load_pipeline():
     path = os.path.join(os.path.dirname(__file__), "stroke_stacking_pipeline.pkl")
@@ -37,18 +47,14 @@ model = load_pipeline()
 
 @st.cache_resource
 def get_explainer(_m):
-    """Try TreeExplainer; if not supported fall back to permutation."""
     try:
-        return shap.TreeExplainer(_m)
+        return shap.TreeExplainer(_m)          # fast for pure tree models
     except shap.utils._exceptions.InvalidModelError:
         return shap.Explainer(_m, algorithm="permutation")
 
 explainer = get_explainer(model)
-# ───────────────────────────────────────────────────────────────────────────
 
-
-
-# ─────────────────────────── Main section ───────────────────────────
+# ─────────────── Main section ──────────────────────────────────────
 if {"user_data", "prediction_prob"} <= st.session_state.keys():
     ud        = st.session_state.user_data
     prob_raw  = float(st.session_state.prediction_prob)
@@ -59,7 +65,6 @@ if {"user_data", "prediction_prob"} <= st.session_state.keys():
     st.warning("⚠️ Higher Risk of Stroke Detected") if prob_raw > 0.5 else \
         st.success("✔️ Lower Risk of Stroke Detected")
 
-    # One-row DataFrame for SHAP
     X_df = pd.DataFrame([ud])
 
     feature_display = ["Heart Disease","Hypertension","Ever Married",
@@ -75,7 +80,6 @@ if {"user_data", "prediction_prob"} <= st.session_state.keys():
         abs8      = np.abs(raw8)
         contrib   = abs8 / abs8.sum() * prob_raw
 
-    # ── Plotly bar chart ─────────────────────────────────────────────
     fig = go.Figure(go.Bar(
         x=feature_display,
         y=contrib * 100,
@@ -84,13 +88,12 @@ if {"user_data", "prediction_prob"} <= st.session_state.keys():
         textposition="auto",
         hovertemplate="<b>%{x}</b><br>Contribution: %{y:.2f}%<extra></extra>"
     ))
-    fig.update_layout(
-        title="How Each Input Contributed to Your Total Risk",
-        yaxis=dict(title="Contribution to Risk (%)", rangemode="tozero"),
-        xaxis=dict(tickangle=-45), margin=dict(t=60, b=120))
+    fig.update_layout(title="How Each Input Contributed to Your Total Risk",
+                      yaxis=dict(title="Contribution to Risk (%)", rangemode="tozero"),
+                      xaxis=dict(tickangle=-45),
+                      margin=dict(t=60, b=120))
     st.plotly_chart(fig, use_container_width=True)
 
-    # ── Navigation buttons ──────────────────────────────────────────
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🔙 Back to Risk Assessment"):
@@ -101,7 +104,7 @@ if {"user_data", "prediction_prob"} <= st.session_state.keys():
 else:
     st.warning("No input data found. Please complete the Risk Assessment first.")
 
-# ─────────────────────────── Footer ────────────────────────────────
+# ─────────────── Footer ────────────────────────────────────────────
 st.markdown("""
   <style>
     .custom-footer{background:rgba(76,157,112,0.6);color:white;padding:30px 0;
@@ -117,7 +120,6 @@ st.markdown("""
     </p>
     <p style='font-size:12px;margin-top:10px;'>Developed by Victoria Mends</p>
   </div>""", unsafe_allow_html=True)
-
 
 
 
