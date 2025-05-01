@@ -25,22 +25,27 @@ st.markdown("""
     <a href='/Results'>Results</a><a href='/Recommendations'>Recommendations</a>
   </div>""", unsafe_allow_html=True)
 
-# ─────────────────────── Load pipeline & SHAP explainer ─────────────
+# ───────────────────── Load pipeline & SHAP explainer ─────────────────────
 @st.cache_resource
 def load_pipeline():
     path = os.path.join(os.path.dirname(__file__), "stroke_stacking_pipeline.pkl")
     if not os.path.exists(path):
-        st.error(f"⚠️ Pipeline file not found at `{path}`"); st.stop()
+        st.error(f"⚠️ Pipeline file not found at {path}"); st.stop()
     return joblib.load(path)
 
 model = load_pipeline()
 
 @st.cache_resource
 def get_explainer(_m):
-    # permutation algorithm works for any sklearn estimator
-    return shap.Explainer(_m, algorithm="permutation")
+    """Try TreeExplainer; if not supported fall back to permutation."""
+    try:
+        return shap.TreeExplainer(_m)
+    except shap.utils._exceptions.InvalidModelError:
+        return shap.Explainer(_m, algorithm="permutation")
 
 explainer = get_explainer(model)
+# ───────────────────────────────────────────────────────────────────────────
+
 
 
 # ─────────────────────────── Main section ───────────────────────────
