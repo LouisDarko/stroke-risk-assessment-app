@@ -31,7 +31,7 @@ _ = st.markdown("""
 # ──────────────────────── Load model & explainer ─────────────────────
 @st.cache_resource
 def load_model():
-    path = os.path.join(os.path.dirname(__file__), "best_gb_model.pkl")
+    path = os.path.join(os.path.dirname(__file__), "best_stacking_model.pkl")
     if not os.path.exists(path):
         st.error(f"⚠️ Model file not found at `{path}`"); st.stop()
     return joblib.load(path)
