@@ -36,7 +36,7 @@ st.markdown("""
 @st.cache_resource
 def load_model():
     base = os.path.dirname(os.path.abspath(__file__))
-    return joblib.load(os.path.join(base, "best_gb_model.pkl"))
+    return joblib.load(os.path.join(base, "best_stacking_model.pkl"))
 
 model = load_model()
 
