@@ -38,16 +38,18 @@ def load_model():
 
 model = load_model()
 
+# 👉 NOTE the leading underscore so Streamlit skips hashing this parameter
 @st.cache_resource
-def get_explainer(m): return shap.TreeExplainer(m)
+def get_explainer(_model):
+    return shap.TreeExplainer(_model)
+
 explainer = get_explainer(model)
 
 # ── Main section ───────────────────────────────────────────────────────────────
 if {"user_data", "prediction_prob"} <= st.session_state.keys():
-    prob_raw = float(st.session_state.prediction_prob)   # 0‒1
-    pct_rounded = round(prob_raw * 100, 2)               # two-decimal %
+    prob_raw      = float(st.session_state.prediction_prob)   # 0‒1
+    pct_rounded   = round(prob_raw * 100, 2)                  # two-decimal %
 
-    # ── Display headline ────────────────────────────────────────────────────
     st.header("🧠 Stroke Percentage Risk")
     st.write(f"Based on your inputs, your estimated risk is **{pct_rounded:.2f}%**")
 
@@ -57,11 +59,11 @@ if {"user_data", "prediction_prob"} <= st.session_state.keys():
     # ── Feature list & colour palette ───────────────────────────────────────
     feature_names = ["Heart Disease","Hypertension","Ever Married",
                      "Smoking Status","Work Type","Gender","Age","Avg Glucose"]
-    palette = ["#A52A2A","#FFD700","#4682B4","#800080"]   # brown, gold, steel blue, purple
+    palette = ["#A52A2A","#FFD700","#4682B4","#800080"]       # brown, gold, steel blue, purple
     colors  = [palette[i % 4] for i in range(8)]
 
     # ── Determine contributions ────────────────────────────────────────────
-    if pct_rounded == 0.00:                                # flattened bars rule
+    if pct_rounded == 0.00:                                   # flatten bars rule
         contrib = np.zeros(len(feature_names))
     else:
         ud = st.session_state.user_data
