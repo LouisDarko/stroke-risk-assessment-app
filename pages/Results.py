@@ -33,19 +33,26 @@ st.markdown("""
 # ─────────────────── Load preprocessing and model ─────────────────────
 @st.cache_resource
 def load_preprocessor():
+    import glob
     base = os.path.dirname(__file__)
-    # Try full pipeline
-    pipeline_path = os.path.join(base, "stroke_pipeline.pkl")
-    if os.path.exists(pipeline_path):
-        return joblib.load(pipeline_path), True
-    # Fallback: scaler + model
-    scaler_path = os.path.join(base, "scaler.pkl")
-    model_path  = os.path.join(base, "best_stacking_model.pkl")
-    if os.path.exists(scaler_path) and os.path.exists(model_path):
-        scaler = joblib.load(scaler_path)
-        model   = joblib.load(model_path)
+    # Try full pipeline (dynamic search)
+    pipeline_files = glob.glob(os.path.join(base, "*pipeline*.pkl"))
+    for path in pipeline_files:
+        try:
+            pipeline = joblib.load(path)
+            return pipeline, True
+        except Exception:
+            continue
+    # Fallback: dynamic model and scaler
+    scaler_files = glob.glob(os.path.join(base, "*scaler*.pkl"))
+    model_files  = glob.glob(os.path.join(base, "*stacking*.pkl"))
+    if scaler_files and model_files:
+        scaler = joblib.load(scaler_files[0])
+        model  = joblib.load(model_files[0])
         return (scaler, model), False
-    st.error("⚠️ Missing preprocessing artifacts. Please add 'stroke_pipeline.pkl' or 'scaler.pkl' + 'best_stacking_model.pkl'.")
+    st.error("⚠️ Could not find a preprocessing pipeline or scaler + model files in the app directory.
+" \
+             + "Please upload a pipeline (*.pkl containing scaler+model) or both scaler and stacking model pickle files.")
     st.stop()
 
 preproc, is_pipeline = load_preprocessor()
@@ -170,6 +177,7 @@ st.markdown("""
     <p style='font-size:12px; margin-top:10px;'>Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
+
 
 
 
