@@ -1,5 +1,6 @@
 import streamlit as st
-import os, joblib, numpy as np, shap, plotly.graph_objects as go
+import os, joblib, numpy as np, pandas as pd, shap, plotly.graph_objects as go
+from sklearn.preprocessing import StandardScaler
 
 # ───────────────────────── Page config & CSS ─────────────────────────
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
@@ -28,33 +29,50 @@ st.markdown("""
   </div>
 """, unsafe_allow_html=True)
 
-# ──────────────────────── Load pipeline or model ─────────────────────────
+# ───────────────────────── Load model ─────────────────────────
 @st.cache_resource
-def load_pipeline_or_model():
+def load_model():
     base = os.path.dirname(__file__)
+    path = os.path.join(base, "best_stacking_model.pkl")
+    if not os.path.exists(path):
+        st.error(f"⚠️ Model file not found at `{path}`")
+        st.stop()
+    return joblib.load(path)
+
+model = load_model()
+
+# ──────────────────────── Load preprocessing artifacts ─────────────────────────
+@st.cache_resource
+def load_preprocessor():
+    base = os.path.dirname(__file__)
+    # Try loading full pipeline first
     pipe_path = os.path.join(base, "stroke_pipeline.pkl")
     if os.path.exists(pipe_path):
-        return joblib.load(pipe_path), True  # pipeline, is_pipeline
-    # fall back to standalone model
-    model_path = os.path.join(base, "best_stacking_model.pkl")
-    if not os.path.exists(model_path):
-        st.error(f"⚠️ Neither stroke_pipeline.pkl nor best_stacking_model.pkl found in {base}")
+        pipeline = joblib.load(pipe_path)
+        return pipeline, True  # pipeline, is_pipeline
+    # Fallback: load scaler and model separately
+    scaler_path = os.path.join(base, "scaler.pkl")
+    model_path  = os.path.join(base, "best_stacking_model.pkl")
+    if not os.path.exists(scaler_path) or not os.path.exists(model_path):
+        st.error("⚠️ Required preprocessor or model file not found (stroke_pipeline.pkl or scaler.pkl + best_stacking_model.pkl)")
         st.stop()
-    model = joblib.load(model_path)
-    return model, False
+    scaler = joblib.load(scaler_path)
+    model   = joblib.load(model_path)
+    return (scaler, model), False  # return tuple, is_pipeline=False
 
-model_or_pipeline, is_pipeline = load_pipeline_or_model()
+preproc, is_pipeline = load_preprocessor()
 
-# ─────────────────── SHAP KernelExplainer Setup ─────────────────────
+# ─────────────────── SHAP Explainer Setup ─────────────────────
 @st.cache_resource
 def get_explainer(_model, background):
     return shap.KernelExplainer(_model.predict_proba, background)
 
-# ─────────────────────────── Main section ────────────────────────────
+# ─────────────────────────── Main ────────────────────────────
 if "user_data" in st.session_state:
     ud = st.session_state.user_data
-    # build raw feature vector as in training
-    age = ud["age"]; glu = ud["avg_glucose_level"]
+    # Build raw feature vector
+    age = ud["age"]
+    glu = ud["avg_glucose_level"]
     raw = np.array([[
         {"Yes":1, "No":0}[ud["heart_disease"]],
         {"Yes":1, "No":0}[ud["hypertension"]],
@@ -64,24 +82,12 @@ if "user_data" in st.session_state:
         {"Male":0, "Female":1}[ud["gender"]],
         age, glu, age**2, age*glu, glu**2
     ]], dtype=float)
+    # Scale using training data scaler
+    features = scaler.transform(raw)
 
-    # predict probability
-    if is_pipeline:
-        probs = model_or_pipeline.predict_proba(raw)[0]
-        classes = model_or_pipeline.named_steps[next(iter(model_or_pipeline.named_steps[-1:]))].classes_
-    else:
-        # require scaler.pkl for manual transform
-        scaler_path = os.path.join(os.path.dirname(__file__), "scaler.pkl")
-        if os.path.exists(scaler_path):
-            scaler = joblib.load(scaler_path)
-            scaled = scaler.transform(raw)
-            probs = model_or_pipeline.predict_proba(scaled)[0]
-        else:
-            st.error("⚠️ scaler.pkl not found. Please export StandardScaler from your training notebook.")
-            st.stop()
-        classes = model_or_pipeline.classes_
-
-    pos_idx = list(classes).index(1)
+    # Predict stroke probability
+    probs = model.predict_proba(features)[0]
+    pos_idx = list(model.classes_).index(1)
     prob_raw = probs[pos_idx]
     pct_disp = round(prob_raw * 100, 2)
 
@@ -89,16 +95,12 @@ if "user_data" in st.session_state:
     st.write(f"Based on your inputs, your estimated risk is **{pct_disp:.2f}%**")
     st.warning("⚠️ Higher Risk Detected") if prob_raw > 0.5 else st.success("✔️ Lower Risk Detected")
 
-    # SHAP explanations
-    explainer = get_explainer(model_or_pipeline, raw)
-    sv = explainer.shap_values(raw, nsamples=100)
-    # pick class-1 values and flatten
-    if isinstance(sv, list) and len(sv) > 1:
-        shap_vals = np.array(sv[1]).reshape(-1)
-    else:
-        shap_vals = np.array(sv).reshape(-1)
+    # SHAP contributions
+    explainer = get_explainer(model, features)
+    sv = explainer.shap_values(features, nsamples=100)
+    shap_vals = np.array(sv[1] if isinstance(sv, list) else sv).reshape(-1)
 
-    # contributions proportional to probability (not log-odds)
+    # Compute contributions matching the probability
     abs_vals = np.abs(shap_vals[:8])
     contrib_prob = abs_vals / abs_vals.sum() * prob_raw
     y_vals = (contrib_prob * 100).tolist()
@@ -111,7 +113,7 @@ if "user_data" in st.session_state:
     palette = ["brown","gold","steelblue","purple"]
     colors = [palette[i % 4] for i in range(len(feature_names))]
 
-    # bar chart
+    # Bar chart
     text_vals = [f"{v:.1f}%" for v in y_vals]
     fig_bar = go.Figure(go.Bar(
         x=feature_names, y=y_vals,
@@ -126,7 +128,7 @@ if "user_data" in st.session_state:
     )
     st.plotly_chart(fig_bar, use_container_width=True)
 
-    # gauge chart
+    # Gauge chart
     fig_gauge = go.Figure(go.Indicator(
         mode="gauge+number", value=pct_disp,
         title={'text':"Overall Stroke Risk (%)"},
@@ -139,7 +141,7 @@ if "user_data" in st.session_state:
     fig_gauge.update_layout(margin=dict(t=50, b=0, l=0, r=0))
     st.plotly_chart(fig_gauge, use_container_width=True)
 
-    # navigation
+    # Navigation
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🔙 Back to Risk Assessment"): st.switch_page("pages/Risk_Assessment.py")
@@ -148,7 +150,7 @@ if "user_data" in st.session_state:
 else:
     st.warning("Please complete the Risk Assessment first.")
 
-# footer
+# Footer
 st.markdown("""
   <style>
     .custom-footer { background: rgba(76,157,112,0.6); color: white; padding: 30px 0;
@@ -167,7 +169,6 @@ st.markdown("""
     <p style='font-size:12px; margin-top:10px;'>Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
-
 
 
 
