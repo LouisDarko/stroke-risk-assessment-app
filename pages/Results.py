@@ -47,6 +47,13 @@ def load_model():
 
 model = load_model()
 
+# ─────────────────── SHAP KernelExplainer Setup ─────────────────────
+@st.cache_resource
+def get_shap_explainer(_model, n_features):
+    # baseline of zeros (no conditions) yields model baseline prediction
+    background = np.zeros((1, n_features))
+    return shap.KernelExplainer(_model.predict_proba, background)
+
 # ─────────────────────────── Main section ────────────────────────────
 required_keys = {"user_data", "prediction_prob"}
 if required_keys <= st.session_state.keys():
@@ -58,7 +65,7 @@ if required_keys <= st.session_state.keys():
     st.write(f"Your estimated risk is **{pct_disp:.2f}%**")
     st.warning("⚠️ Higher Risk Detected") if prob_raw > 0.5 else st.success("✔️ Lower Risk Detected")
 
-    # ── Prepare feature vector using user input ─────────────────────────
+    # ── Build feature vector from user_data ─────────────────────────
     age = ud["age"]
     glu = ud["avg_glucose_level"]
     features = [
@@ -68,69 +75,75 @@ if required_keys <= st.session_state.keys():
         {"never smoked":0, "formerly smoked":1, "smokes":2}[ud["smoking_status"]],
         {"Private":0, "Self-employed":1, "Govt_job":2, "Never_worked":3}[ud["work_type"]],
         {"Male":0, "Female":1}[ud["gender"]],
-        age, glu, age**2, age*glu, glu**2
+        age, glu, age**2, age * glu, glu**2
     ]
     X = np.array([features])
 
-    # ── SHAP explanation using user input as background ───────────────
-    explainer = shap.Explainer(model.predict_proba, X)
-    shap_exp = explainer(X)
-    # shape (1, n_classes, n_features)
-    shap_vals = shap_exp.values[0, 1, :]
+    # ── Compute SHAP values with model-agnostic explainer ─────────
+    explainer = get_shap_explainer(model, X.shape[1])
+    # compute shap values (list per class)
+    sv = explainer.shap_values(X, nsamples=100)
+    # extract shap values for class=1 (stroke)
+    shap_vals = sv[1][0] if isinstance(sv, list) else sv[0]
 
-    # ── Compute relative contributions ─────────────────────────────────
+    # ── Relative contributions for the first 8 features ─────────────
     abs_vals = np.abs(shap_vals[:8])
     contrib_pct = abs_vals / abs_vals.sum() * 100
     contrib_list = contrib_pct.tolist()
 
     feature_names = [
         "Heart Disease", "Hypertension", "Ever Married",
-        "Smoking Status", "Work Type", "Gender", "Age", "Avg Glucose"
+        "Smoking Status", "Work Type", "Gender",
+        "Age", "Avg Glucose"
     ]
     palette = ["brown", "gold", "steelblue", "purple"]
     colors = [palette[i % 4] for i in range(len(feature_names))]
 
-    # ── Bar chart: relative contributions ───────────────────────────────
+    # ── Bar chart: feature contributions ──────────────────────────────
     y_vals = contrib_list
     text_vals = [f"{v:.1f}%" for v in y_vals]
-    fig = go.Figure(go.Bar(
+    fig_bar = go.Figure(go.Bar(
         x=feature_names,
         y=y_vals,
         marker=dict(color=colors),
         text=text_vals,
         textposition="auto",
-        hovertemplate="<b>%{x}</b><br>Contrib: %{y:.1f}%<extra></extra>"
+        hovertemplate="<b>%{x}</b><br>Contribution: %{y:.1f}%<extra></extra>"
     ))
-    fig.update_layout(
-        title="Relative Feature Contributions to Stroke Risk",
+    fig_bar.update_layout(
+        title="Feature Contributions to Stroke Risk",
         yaxis_title="Contribution (%)",
         xaxis_tickangle=-45,
         margin=dict(t=60, b=120)
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig_bar, use_container_width=True)
 
     # ── Gauge chart: overall risk ─────────────────────────────────────
-    gauge = go.Figure(go.Indicator(
-        mode="gauge+number+delta",
+    fig_gauge = go.Figure(go.Indicator(
+        mode="gauge+number",
         value=pct_disp,
-        delta={'reference':50, 'increasing':{'color':'red'}, 'decreasing':{'color':'green'}},
-        title={'text':"Overall Stroke Risk (%)", 'font':{'size':18}},
+        title={'text': "Overall Stroke Risk (%)"},
         gauge={
-            'axis':{'range':[0,100]},
-            'bar':{'color':'steelblue'},
-            'steps':[{'range':[0,50],'color':'lightgreen'},{'range':[50,100],'color':'lightcoral'}],
-            'threshold':{'line':{'color':'black','width':4},'value':50}
+            'axis': {'range': [0, 100]},
+            'bar': {'color': 'steelblue'},
+            'steps': [
+                {'range': [0, 50], 'color': 'lightgreen'},
+                {'range': [50, 100], 'color': 'lightcoral'}
+            ],
+            'threshold': {'line': {'color': 'red', 'width': 4}, 'value': 50}
         }
     ))
-    gauge.update_layout(margin={'t':50,'b':0,'l':0,'r':0})
-    st.plotly_chart(gauge, use_container_width=True)
+    fig_gauge.update_layout(margin=dict(t=50, b=0, l=0, r=0))
+    st.plotly_chart(fig_gauge, use_container_width=True)
 
-    # ── Navigation ────────────────────────────────────────────────────
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("🔙 Back to Risk Assessment"): st.switch_page("pages/Risk_Assessment.py")
-    with c2:
-        if st.button("📘 Go to Recommendations"): st.switch_page("pages/Recommendations.py")
+    # ── Navigation buttons ──────────────────────────────────────────────
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🔙 Back to Risk Assessment"):
+            st.switch_page("pages/Risk_Assessment.py")
+    with col2:
+        if st.button("📘 Go to Recommendations"):
+            st.switch_page("pages/Recommendations.py")
 
 else:
     st.warning("Please complete the Risk Assessment first.")
