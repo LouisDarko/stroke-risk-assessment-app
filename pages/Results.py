@@ -5,8 +5,8 @@ import os, joblib, numpy as np, shap, plotly.graph_objects as go
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
 st.markdown("""
   <style>
-    #MainMenu, footer, header{visibility:hidden;}
-    [data-testid="stSidebar"],[data-testid="collapsedControl"]{display:none;}
+    #MainMenu, footer, header { visibility: hidden; }
+    [data-testid=\"stSidebar\"], [data-testid=\"collapsedControl\"] { display: none; }
   </style>
 """, unsafe_allow_html=True)
 
@@ -14,11 +14,19 @@ st.markdown("""
 st.title("📊 Stroke Risk Results")
 st.markdown("""
   <style>
-    .custom-nav{background:#e8f5e9;padding:15px 0;border-radius:10px;
-                display:flex;justify-content:center;gap:60px;margin-bottom:30px;
-                font-size:18px;font-weight:600;}
-    .custom-nav a{text-decoration:none;color:#4C9D70;}
-    .custom-nav a:hover{color:#388e3c;text-decoration:underline;}
+    .custom-nav {
+      background: #e8f5e9;
+      padding: 15px 0;
+      border-radius: 10px;
+      display: flex;
+      justify-content: center;
+      gap: 60px;
+      margin-bottom: 30px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .custom-nav a { text-decoration: none; color: #4C9D70; }
+    .custom-nav a:hover { color: #388e3c; text-decoration: underline; }
   </style>
   <div class="custom-nav">
     <a href='/Home'>Home</a>
@@ -39,112 +47,111 @@ def load_model():
 
 model = load_model()
 
-# ─────────────────────── SHAP KernelExplainer ───────────────────────
-@st.cache_resource
-def get_explainer(_model, n_features):
-    background = np.zeros((1, n_features))
-    return shap.KernelExplainer(_model.predict_proba, background)
-
 # ─────────────────────────── Main section ────────────────────────────
 required_keys = {"user_data", "prediction_prob"}
 if required_keys <= st.session_state.keys():
-    ud       = st.session_state.user_data
+    ud = st.session_state.user_data
     prob_raw = float(st.session_state.prediction_prob)
     pct_disp = round(prob_raw * 100, 2)
 
     st.header("🧠 Stroke Percentage Risk")
-    st.write(f"Based on your inputs, your estimated risk is **{pct_disp:.2f}%**")
-    if prob_raw > 0.5:
-        st.warning("⚠️ Higher Risk of Stroke Detected")
-    else:
-        st.success("✔️ Lower Risk of Stroke Detected")
+    st.write(f"Your estimated risk is **{pct_disp:.2f}%**")
+    st.warning("⚠️ Higher Risk Detected") if prob_raw > 0.5 else st.success("✔️ Lower Risk Detected")
 
-    # ── Build feature vector ───────────────────────────────────────────
-    age, glu = ud["age"], ud["avg_glucose_level"]
-    X = np.array([[
-        {"Yes": 1, "No": 0}[ud["heart_disease"]],
-        {"Yes": 1, "No": 0}[ud["hypertension"]],
-        {"Yes": 1, "No": 0}[ud["ever_married"]],
-        {"never smoked": 0, "formerly smoked": 1, "smokes": 2}[ud["smoking_status"]],
-        {"Private": 0, "Self-employed": 1, "Govt_job": 2, "Never_worked": 3}[ud["work_type"]],
-        {"Male": 0, "Female": 1}[ud["gender"]],
-        age, glu, age**2, age * glu, glu**2
-    ]])
+    # ── Prepare feature vector using user input ─────────────────────────
+    age = ud["age"]
+    glu = ud["avg_glucose_level"]
+    features = [
+        {"Yes":1, "No":0}[ud["heart_disease"]],
+        {"Yes":1, "No":0}[ud["hypertension"]],
+        {"Yes":1, "No":0}[ud["ever_married"]],
+        {"never smoked":0, "formerly smoked":1, "smokes":2}[ud["smoking_status"]],
+        {"Private":0, "Self-employed":1, "Govt_job":2, "Never_worked":3}[ud["work_type"]],
+        {"Male":0, "Female":1}[ud["gender"]],
+        age, glu, age**2, age*glu, glu**2
+    ]
+    X = np.array([features])
 
-    # ── SHAP contributions via KernelExplainer ─────────────────────────
-    feature_names = ["Heart Disease", "Hypertension", "Ever Married",
-                     "Smoking Status", "Work Type", "Gender", "Age", "Avg Glucose"]
-    palette = ["#A52A2A", "#FFD700", "#4682B4", "#800080"]
-    colors  = [palette[i % 4] for i in range(len(feature_names))]
+    # ── SHAP explanation using user input as background ───────────────
+    explainer = shap.Explainer(model.predict_proba, X)
+    shap_exp = explainer(X)
+    # shape (1, n_classes, n_features)
+    shap_vals = shap_exp.values[0, 1, :]
 
-    if pct_disp == 0.00:
-        contrib_list = [0.0] * len(feature_names)
-    else:
-        explainer = get_explainer(model, X.shape[1])
-        sv = explainer.shap_values(X, nsamples=100)
+    # ── Compute relative contributions ─────────────────────────────────
+    abs_vals = np.abs(shap_vals[:8])
+    contrib_pct = abs_vals / abs_vals.sum() * 100
+    contrib_list = contrib_pct.tolist()
 
-        # pick the stroke-class explanation if it comes as a list
-        raw = None
-        if isinstance(sv, list) and len(sv) > 1:
-            raw = sv[1]
-        else:
-            raw = sv
+    feature_names = [
+        "Heart Disease", "Hypertension", "Ever Married",
+        "Smoking Status", "Work Type", "Gender", "Age", "Avg Glucose"
+    ]
+    palette = ["brown", "gold", "steelblue", "purple"]
+    colors = [palette[i % 4] for i in range(len(feature_names))]
 
-        # raw could be shape (1, n_feats) or list-of-lists; flatten to 1D
-        arr = np.array(raw).reshape(-1)
-        top8 = arr[:8]
-        abs8 = np.abs(top8)
-        contrib_arr = abs8 / abs8.sum() * prob_raw
-        contrib_list = contrib_arr.tolist()
-
-    # prepare chart values
-    y_vals    = [v * 100 for v in contrib_list]
-    text_vals = [f"{v:.2f}%" for v in y_vals]
-
-    # ── Plotly bar chart ───────────────────────────────────────────────
+    # ── Bar chart: relative contributions ───────────────────────────────
+    y_vals = contrib_list
+    text_vals = [f"{v:.1f}%" for v in y_vals]
     fig = go.Figure(go.Bar(
         x=feature_names,
         y=y_vals,
         marker=dict(color=colors),
         text=text_vals,
         textposition="auto",
-        hovertemplate="<b>%{x}</b><br>Contribution: %{y:.2f}%<extra></extra>"
+        hovertemplate="<b>%{x}</b><br>Contrib: %{y:.1f}%<extra></extra>"
     ))
     fig.update_layout(
-        title="How Each Input Contributed to Your Total Risk",
-        yaxis=dict(title="Contribution to Risk (%)", rangemode="tozero"),
-        xaxis=dict(tickangle=-45),
+        title="Relative Feature Contributions to Stroke Risk",
+        yaxis_title="Contribution (%)",
+        xaxis_tickangle=-45,
         margin=dict(t=60, b=120)
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # ── Navigation buttons ──────────────────────────────────────────────
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🔙 Back to Risk Assessment"):
-            st.switch_page("pages/Risk_Assessment.py")
-    with col2:
-        if st.button("📘 Go to Recommendations"):
-            st.switch_page("pages/Recommendations.py")
+    # ── Gauge chart: overall risk ─────────────────────────────────────
+    gauge = go.Figure(go.Indicator(
+        mode="gauge+number+delta",
+        value=pct_disp,
+        delta={'reference':50, 'increasing':{'color':'red'}, 'decreasing':{'color':'green'}},
+        title={'text':"Overall Stroke Risk (%)", 'font':{'size':18}},
+        gauge={
+            'axis':{'range':[0,100]},
+            'bar':{'color':'steelblue'},
+            'steps':[{'range':[0,50],'color':'lightgreen'},{'range':[50,100],'color':'lightcoral'}],
+            'threshold':{'line':{'color':'black','width':4},'value':50}
+        }
+    ))
+    gauge.update_layout(margin={'t':50,'b':0,'l':0,'r':0})
+    st.plotly_chart(gauge, use_container_width=True)
+
+    # ── Navigation ────────────────────────────────────────────────────
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("🔙 Back to Risk Assessment"): st.switch_page("pages/Risk_Assessment.py")
+    with c2:
+        if st.button("📘 Go to Recommendations"): st.switch_page("pages/Recommendations.py")
 
 else:
-    st.warning("No input data found. Please complete the Risk Assessment first.")
+    st.warning("Please complete the Risk Assessment first.")
 
 # ─────────────────────────── Footer ─────────────────────────────────
 st.markdown("""
   <style>
-    .custom-footer{background:rgba(76,157,112,0.6);color:white;padding:30px 0;
-                   border-radius:12px;margin-top:40px;text-align:center;font-size:14px;}
-    .custom-footer a{color:white;text-decoration:none;margin:0 15px;}
-    .custom-footer a:hover{text-decoration:underline;}
+    .custom-footer { background: rgba(76,157,112,0.6); color: white; padding: 30px 0;
+                     border-radius: 12px; margin-top: 40px; text-align: center; font-size: 14px; }
+    .custom-footer a { color: white; text-decoration: none; margin: 0 15px; }
+    .custom-footer a:hover { text-decoration: underline; }
   </style>
   <div class='custom-footer'>
     <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
     <p>
-      <a href='/Home'>Home</a><a href='/Risk_Assessment'>Risk Assessment</a>
-      <a href='/Results'>Results</a><a href='/Recommendations'>Recommendations</a>
+      <a href='/Home'>Home</a>
+      <a href='/Risk_Assessment'>Risk Assessment</a>
+      <a href='/Results'>Results</a>
+      <a href='/Recommendations'>Recommendations</a>
     </p>
-    <p style='font-size:12px;margin-top:10px;'>Developed by Victoria Mends</p>
+    <p style='font-size:12px; margin-top:10px;'>Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
 
