@@ -78,25 +78,26 @@ if required_keys <= st.session_state.keys():
     colors  = [palette[i % 4] for i in range(len(feature_names))]
 
     if pct_disp == 0.00:
-        # all-zero contributions
         contrib_list = [0.0] * len(feature_names)
     else:
         explainer = get_explainer(model, X.shape[1])
         sv = explainer.shap_values(X, nsamples=100)
 
-        # pick the right output shape
+        # pick the stroke-class explanation if it comes as a list
+        raw = None
         if isinstance(sv, list) and len(sv) > 1:
-            shap_vals = sv[1][0]
+            raw = sv[1]
         else:
-            shap_vals = sv[0] if isinstance(sv, list) else sv
+            raw = sv
 
-        abs8 = np.abs(shap_vals[:8])
-        raw_contrib = abs8 / abs8.sum() * prob_raw
+        # raw could be shape (1, n_feats) or list-of-lists; flatten to 1D
+        arr = np.array(raw).reshape(-1)
+        top8 = arr[:8]
+        abs8 = np.abs(top8)
+        contrib_arr = abs8 / abs8.sum() * prob_raw
+        contrib_list = contrib_arr.tolist()
 
-        # convert to plain Python floats
-        contrib_list = raw_contrib.tolist()
-
-    # prepare y-values (%) and text labels
+    # prepare chart values
     y_vals    = [v * 100 for v in contrib_list]
     text_vals = [f"{v:.2f}%" for v in y_vals]
 
