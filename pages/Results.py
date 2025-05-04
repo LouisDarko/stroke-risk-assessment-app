@@ -48,9 +48,8 @@ def get_explainer(_model, background):
 # ─────────────────────────── Main section ────────────────────────────
 if "user_data" in st.session_state:
     ud = st.session_state.user_data
-    age = ud["age"]
-    glu = ud["avg_glucose_level"]
-    # Build raw feature vector in training order
+    # build raw feature vector
+    age = ud["age"]; glu = ud["avg_glucose_level"]
     raw = np.array([[
         {"Yes":1, "No":0}[ud["heart_disease"]],
         {"Yes":1, "No":0}[ud["hypertension"]],
@@ -61,16 +60,24 @@ if "user_data" in st.session_state:
         age, glu, age**2, age*glu, glu**2
     ]], dtype=float)
 
-    # Manual Min-Max scaling for numeric features (approximate training ranges)
+    # Min-Max scaling of all features to [0,1]
     scaled = raw.copy()
-    scaled[0,6] /= 100.0        # age scaled by max age
-    scaled[0,7] /= 200.0        # glucose scaled by expected max
-    scaled[0,8] /= (100.0**2)    # age_sq
+    # categoricals: divide by max
+    scaled[0,0] /= 1.0   # heart_disease (0/1)
+    scaled[0,1] /= 1.0   # hypertension
+    scaled[0,2] /= 1.0   # ever_married
+    scaled[0,3] /= 2.0   # smoking_status (0–2)
+    scaled[0,4] /= 3.0   # work_type (0–3)
+    scaled[0,5] /= 1.0   # gender
+    # numeric: use expected maxima
+    scaled[0,6] /= 100.0      # age
+    scaled[0,7] /= 200.0      # avg_glucose_level
+    scaled[0,8] /= (100.0**2) # age_sq
     scaled[0,9] /= (100.0*200.0) # age_glucose
-    scaled[0,10] /= (200.0**2)   # glucose_sq
+    scaled[0,10] /= (200.0**2)  # glucose_sq
     features = scaled
 
-    # Predict probability of stroke (class=1)
+    # predict probability of stroke
     probs = model.predict_proba(features)[0]
     pos_idx = list(model.classes_).index(1)
     prob_raw = probs[pos_idx]
@@ -84,67 +91,84 @@ if "user_data" in st.session_state:
     background = np.zeros((1, features.shape[1]))
     explainer = get_explainer(model, background)
     sv = explainer.shap_values(features, nsamples=100)
-    shap_vals = np.array(sv[1] if isinstance(sv, list) and len(sv)>1 else sv).reshape(-1)
+    # get class-1 shap values and flatten
+    if isinstance(sv, list) and len(sv) > 1:
+        shap_vals = np.array(sv[1]).reshape(-1)
+    else:
+        shap_vals = np.array(sv).reshape(-1)
 
-    # Compute contributions for first 8 features
-    contrib = np.abs(shap_vals[:8])
-    contrib_pct = contrib / contrib.sum() * 100
-    y_vals = contrib_pct.tolist()
+    # compute absolute shap contributions
+    abs_vals = np.abs(shap_vals[:8])
+    # scale to match predicted probability
+    contrib_prob = abs_vals / abs_vals.sum() * prob_raw
+    # convert to percentages for chart
+    y_vals = (contrib_prob * 100).tolist()
 
-    # Feature names & colors
-    feature_names = ["Heart Disease","Hypertension","Ever Married",
-                     "Smoking Status","Work Type","Gender",
-                     "Age","Avg Glucose"]
+    feature_names = [
+        "Heart Disease","Hypertension","Ever Married",
+        "Smoking Status","Work Type","Gender",
+        "Age","Avg Glucose"
+    ]
     palette = ["brown","gold","steelblue","purple"]
-    colors = [palette[i%4] for i in range(len(feature_names))]
+    colors = [palette[i % 4] for i in range(len(feature_names))]
 
-    # Bar chart
+    # bar chart
     text_vals = [f"{v:.1f}%" for v in y_vals]
     fig_bar = go.Figure(go.Bar(
         x=feature_names, y=y_vals,
         marker=dict(color=colors), text=text_vals, textposition="auto",
         hovertemplate="<b>%{x}</b><br>Contribution: %{y:.1f}%<extra></extra>"
     ))
-    fig_bar.update_layout(title="Feature Contributions to Stroke Risk",
-                          yaxis_title="Contribution (%)",
-                          xaxis_tickangle=-45, margin=dict(t=60,b=120))
+    fig_bar.update_layout(
+        title="Feature Contributions to Stroke Risk (Sum = Overall %)",
+        yaxis_title="Contribution (%)",
+        xaxis_tickangle=-45,
+        margin=dict(t=60, b=120)
+    )
     st.plotly_chart(fig_bar, use_container_width=True)
 
-    # Gauge chart
+    # gauge chart
     fig_gauge = go.Figure(go.Indicator(
         mode="gauge+number", value=pct_disp,
         title={'text':"Overall Stroke Risk (%)"},
-        gauge={'axis':{'range':[0,100]}, 'bar':{'color':'steelblue'},
-               'steps':[{'range':[0,50],'color':'lightgreen'},{'range':[50,100],'color':'lightcoral'}],
-               'threshold':{'line':{'color':'red','width':4},'value':50}}
+        gauge={
+            'axis':{'range':[0,100]}, 'bar':{'color':'steelblue'},
+            'steps':[{'range':[0,50],'color':'lightgreen'},{'range':[50,100],'color':'lightcoral'}],
+            'threshold':{'line':{'color':'red','width':4},'value':50}
+        }
     ))
-    fig_gauge.update_layout(margin=dict(t=50,b=0,l=0,r=0))
+    fig_gauge.update_layout(margin=dict(t=50, b=0, l=0, r=0))
     st.plotly_chart(fig_gauge, use_container_width=True)
 
-    # Navigation
-    c1,c2 = st.columns(2)
-    with c1:
+    # navigation
+    col1, col2 = st.columns(2)
+    with col1:
         if st.button("🔙 Back to Risk Assessment"): st.switch_page("pages/Risk_Assessment.py")
-    with c2:
+    with col2:
         if st.button("📘 Go to Recommendations"): st.switch_page("pages/Recommendations.py")
 else:
     st.warning("Please complete the Risk Assessment first.")
 
-# Footer
+# footer
 st.markdown("""
   <style>
-    .custom-footer {background:rgba(76,157,112,0.6);color:white; padding:30px 0;
-                     border-radius:12px; margin-top:40px; text-align:center; font-size:14px;}
-    .custom-footer a {color:white; text-decoration:none; margin:0 15px;}
-    .custom-footer a:hover {text-decoration:underline;}
+    .custom-footer { background: rgba(76,157,112,0.6); color: white; padding: 30px 0;
+                     border-radius: 12px; margin-top: 40px; text-align: center; font-size: 14px; }
+    .custom-footer a { color: white; text-decoration: none; margin: 0 15px; }
+    .custom-footer a:hover { text-decoration: underline; }
   </style>
   <div class='custom-footer'>
     <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
-    <p><a href='/Home'>Home</a> <a href='/Risk_Assessment'>Risk Assessment</a>
-       <a href='/Results'>Results</a> <a href='/Recommendations'>Recommendations</a></p>
+    <p>
+      <a href='/Home'>Home</a>
+      <a href='/Risk_Assessment'>Risk Assessment</a>
+      <a href='/Results'>Results</a>
+      <a href='/Recommendations'>Recommendations</a>
+    </p>
     <p style='font-size:12px; margin-top:10px;'>Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
+
 
 
 
