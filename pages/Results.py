@@ -1,6 +1,5 @@
 import streamlit as st
-import os, joblib, numpy as np, pandas as pd, shap, plotly.graph_objects as go
-from sklearn.preprocessing import StandardScaler
+import os, joblib, numpy as np, shap, plotly.graph_objects as go
 
 # ───────────────────────── Page config & CSS ─────────────────────────
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
@@ -15,9 +14,11 @@ st.markdown("""
 st.title("📊 Stroke Risk Results")
 st.markdown("""
   <style>
-    .custom-nav { background: #e8f5e9; padding: 15px 0; border-radius: 10px;
-                 display: flex; justify-content: center; gap: 60px; margin-bottom: 30px;
-                 font-size: 18px; font-weight: 600; }
+    .custom-nav {
+      background: #e8f5e9; padding: 15px 0; border-radius: 10px;
+      display: flex; justify-content: center; gap: 60px; margin-bottom: 30px;
+      font-size: 18px; font-weight: 600;
+    }
     .custom-nav a { text-decoration: none; color: #4C9D70; }
     .custom-nav a:hover { color: #388e3c; text-decoration: underline; }
   </style>
@@ -29,50 +30,35 @@ st.markdown("""
   </div>
 """, unsafe_allow_html=True)
 
-# ───────────────────────── Load model ─────────────────────────
-@st.cache_resource
-def load_model():
-    base = os.path.dirname(__file__)
-    path = os.path.join(base, "best_stacking_model.pkl")
-    if not os.path.exists(path):
-        st.error(f"⚠️ Model file not found at `{path}`")
-        st.stop()
-    return joblib.load(path)
-
-model = load_model()
-
-# ──────────────────────── Load preprocessing artifacts ─────────────────────────
+# ─────────────────── Load preprocessing and model ─────────────────────
 @st.cache_resource
 def load_preprocessor():
     base = os.path.dirname(__file__)
-    # Try loading full pipeline first
-    pipe_path = os.path.join(base, "stroke_pipeline.pkl")
-    if os.path.exists(pipe_path):
-        pipeline = joblib.load(pipe_path)
-        return pipeline, True  # pipeline, is_pipeline
-    # Fallback: load scaler and model separately
+    # Try full pipeline
+    pipeline_path = os.path.join(base, "stroke_pipeline.pkl")
+    if os.path.exists(pipeline_path):
+        return joblib.load(pipeline_path), True
+    # Fallback: scaler + model
     scaler_path = os.path.join(base, "scaler.pkl")
     model_path  = os.path.join(base, "best_stacking_model.pkl")
-    if not os.path.exists(scaler_path) or not os.path.exists(model_path):
-        st.error("⚠️ Required preprocessor or model file not found (stroke_pipeline.pkl or scaler.pkl + best_stacking_model.pkl)")
-        st.stop()
-    scaler = joblib.load(scaler_path)
-    model   = joblib.load(model_path)
-    return (scaler, model), False  # return tuple, is_pipeline=False
+    if os.path.exists(scaler_path) and os.path.exists(model_path):
+        scaler = joblib.load(scaler_path)
+        model   = joblib.load(model_path)
+        return (scaler, model), False
+    st.error("⚠️ Missing preprocessing artifacts. Please add 'stroke_pipeline.pkl' or 'scaler.pkl' + 'best_stacking_model.pkl'.")
+    st.stop()
 
 preproc, is_pipeline = load_preprocessor()
 
 # ─────────────────── SHAP Explainer Setup ─────────────────────
 @st.cache_resource
-def get_explainer(_model, background):
-    return shap.KernelExplainer(_model.predict_proba, background)
+def get_explainer(model_obj, background):
+    return shap.KernelExplainer(model_obj.predict_proba, background)
 
 # ─────────────────────────── Main ────────────────────────────
 if "user_data" in st.session_state:
     ud = st.session_state.user_data
-    # Build raw feature vector
-    age = ud["age"]
-    glu = ud["avg_glucose_level"]
+    # Raw feature vector in training order
     raw = np.array([[
         {"Yes":1, "No":0}[ud["heart_disease"]],
         {"Yes":1, "No":0}[ud["hypertension"]],
@@ -80,57 +66,72 @@ if "user_data" in st.session_state:
         {"never smoked":0, "formerly smoked":1, "smokes":2}[ud["smoking_status"]],
         {"Private":0, "Self-employed":1, "Govt_job":2, "Never_worked":3}[ud["work_type"]],
         {"Male":0, "Female":1}[ud["gender"]],
-        age, glu, age**2, age*glu, glu**2
+        ud["age"], ud["avg_glucose_level"],
+        ud["age"]**2,
+        ud["age"] * ud["avg_glucose_level"],
+        ud["avg_glucose_level"]**2
     ]], dtype=float)
-    # Scale using training data scaler
-    features = scaler.transform(raw)
 
-    # Predict stroke probability
-    probs = model.predict_proba(features)[0]
-    pos_idx = list(model.classes_).index(1)
-    prob_raw = probs[pos_idx]
-    pct_disp = round(prob_raw * 100, 2)
+    # Apply preprocessing
+    if is_pipeline:
+        pipeline = preproc
+        features = raw
+        probs = pipeline.predict_proba(features)[0]
+        prediction = pipeline.predict(features)[0]
+        classes = pipeline.classes_
+        background = raw
+    else:
+        scaler, model = preproc
+        features = scaler.transform(raw)
+        probs = model.predict_proba(features)[0]
+        prediction = model.predict(features)[0]
+        classes = model.classes_
+        background = features
 
-    st.header("🧠 Stroke Percentage Risk")
-    st.write(f"Based on your inputs, your estimated risk is **{pct_disp:.2f}%**")
-    st.warning("⚠️ Higher Risk Detected") if prob_raw > 0.5 else st.success("✔️ Lower Risk Detected")
+    # Extract positive-class probability
+    pos_idx = list(classes).index(1)
+    prob = probs[pos_idx]
 
-    # SHAP contributions
-    explainer = get_explainer(model, features)
-    sv = explainer.shap_values(features, nsamples=100)
+    # Display risk message
+    if prediction == 1:
+        st.error(f"⚠️ High risk of stroke.\n\n**Probability:** {prob:.2%}")
+    else:
+        st.success(f"✅ Low risk of stroke.\n\n**Probability:** {prob:.2%}")
+
+    # SHAP explanation
+    explainer = get_explainer(preproc if is_pipeline else model, background)
+    sv = explainer.shap_values(features if not is_pipeline else raw, nsamples=100)
     shap_vals = np.array(sv[1] if isinstance(sv, list) else sv).reshape(-1)
 
-    # Compute contributions matching the probability
+    # Relative contributions (sum to 100%)
     abs_vals = np.abs(shap_vals[:8])
-    contrib_prob = abs_vals / abs_vals.sum() * prob_raw
-    y_vals = (contrib_prob * 100).tolist()
+    rel_pct = abs_vals / abs_vals.sum() * 100
+    y_vals = rel_pct.tolist()
 
+    # Plot feature contributions
     feature_names = [
         "Heart Disease","Hypertension","Ever Married",
         "Smoking Status","Work Type","Gender",
         "Age","Avg Glucose"
     ]
-    palette = ["brown","gold","steelblue","purple"]
-    colors = [palette[i % 4] for i in range(len(feature_names))]
-
-    # Bar chart
-    text_vals = [f"{v:.1f}%" for v in y_vals]
+    colors = ["brown","gold","steelblue","purple"]
     fig_bar = go.Figure(go.Bar(
         x=feature_names, y=y_vals,
-        marker=dict(color=colors), text=text_vals, textposition="auto",
+        marker=dict(color=[colors[i%4] for i in range(len(feature_names))]),
+        text=[f"{v:.1f}%" for v in y_vals], textposition="auto",
         hovertemplate="<b>%{x}</b><br>Contribution: %{y:.1f}%<extra></extra>"
     ))
     fig_bar.update_layout(
-        title="Feature Contributions to Stroke Risk (Sum = Overall %)",
+        title="Relative Feature Contributions to Stroke Risk",
         yaxis_title="Contribution (%)",
         xaxis_tickangle=-45,
         margin=dict(t=60, b=120)
     )
     st.plotly_chart(fig_bar, use_container_width=True)
 
-    # Gauge chart
+    # Gauge chart for overall risk
     fig_gauge = go.Figure(go.Indicator(
-        mode="gauge+number", value=pct_disp,
+        mode="gauge+number", value=prob*100,
         title={'text':"Overall Stroke Risk (%)"},
         gauge={
             'axis':{'range':[0,100]}, 'bar':{'color':'steelblue'},
@@ -142,10 +143,10 @@ if "user_data" in st.session_state:
     st.plotly_chart(fig_gauge, use_container_width=True)
 
     # Navigation
-    col1, col2 = st.columns(2)
-    with col1:
+    c1, c2 = st.columns(2)
+    with c1:
         if st.button("🔙 Back to Risk Assessment"): st.switch_page("pages/Risk_Assessment.py")
-    with col2:
+    with c2:
         if st.button("📘 Go to Recommendations"): st.switch_page("pages/Recommendations.py")
 else:
     st.warning("Please complete the Risk Assessment first.")
