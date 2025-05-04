@@ -78,30 +78,34 @@ if required_keys <= st.session_state.keys():
     colors  = [palette[i % 4] for i in range(len(feature_names))]
 
     if pct_disp == 0.00:
-        contrib = np.zeros(len(feature_names))
+        # all-zero contributions
+        contrib_list = [0.0] * len(feature_names)
     else:
         explainer = get_explainer(model, X.shape[1])
-        # compute SHAP values (nsamples can be tuned)
         sv = explainer.shap_values(X, nsamples=100)
 
-        # handle both list-of-arrays and single-array outputs:
+        # pick the right output shape
         if isinstance(sv, list) and len(sv) > 1:
-            # multi-output → pick the 'stroke' class explanation
             shap_vals = sv[1][0]
         else:
-            # single ndarray: first (and only) row is our sample
-            shap_vals = sv[0]
+            shap_vals = sv[0] if isinstance(sv, list) else sv
 
-        # only take the first 8 original features
-        abs8    = np.abs(shap_vals[:8])
-        contrib = abs8 / abs8.sum() * prob_raw
+        abs8 = np.abs(shap_vals[:8])
+        raw_contrib = abs8 / abs8.sum() * prob_raw
+
+        # convert to plain Python floats
+        contrib_list = raw_contrib.tolist()
+
+    # prepare y-values (%) and text labels
+    y_vals    = [v * 100 for v in contrib_list]
+    text_vals = [f"{v:.2f}%" for v in y_vals]
 
     # ── Plotly bar chart ───────────────────────────────────────────────
     fig = go.Figure(go.Bar(
         x=feature_names,
-        y=contrib * 100,
+        y=y_vals,
         marker=dict(color=colors),
-        text=[f"{v*100:.2f}%" for v in contrib],
+        text=text_vals,
         textposition="auto",
         hovertemplate="<b>%{x}</b><br>Contribution: %{y:.2f}%<extra></extra>"
     ))
@@ -142,11 +146,6 @@ st.markdown("""
     <p style='font-size:12px;margin-top:10px;'>Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
-
-
-
-
-
 
 
 
