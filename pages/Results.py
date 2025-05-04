@@ -15,15 +15,9 @@ st.title("📊 Stroke Risk Results")
 st.markdown("""
   <style>
     .custom-nav {
-      background: #e8f5e9;
-      padding: 15px 0;
-      border-radius: 10px;
-      display: flex;
-      justify-content: center;
-      gap: 60px;
-      margin-bottom: 30px;
-      font-size: 18px;
-      font-weight: 600;
+      background: #e8f5e9; padding: 15px 0; border-radius: 10px;
+      display: flex; justify-content: center; gap: 60px; margin-bottom: 30px;
+      font-size: 18px; font-weight: 600;
     }
     .custom-nav a { text-decoration: none; color: #4C9D70; }
     .custom-nav a:hover { color: #388e3c; text-decoration: underline; }
@@ -50,47 +44,61 @@ model = load_model()
 # ─────────────────── SHAP KernelExplainer Setup ─────────────────────
 @st.cache_resource
 def get_shap_explainer(_model, n_features):
-    # baseline of zeros (no conditions) yields model baseline prediction
+    # baseline of zeros yields the model's average output
     background = np.zeros((1, n_features))
     return shap.KernelExplainer(_model.predict_proba, background)
 
 # ─────────────────────────── Main section ────────────────────────────
-required_keys = {"user_data", "prediction_prob"}
-if required_keys <= st.session_state.keys():
+if "user_data" in st.session_state:
     ud = st.session_state.user_data
-    prob_raw = float(st.session_state.prediction_prob)
+
+    # ── Rebuild feature vector exactly as in Assessment ───────────────
+    age = ud["age"]
+    glu = ud["avg_glucose_level"]
+    features = np.array([[
+        {"Yes":1, "No":0}[ud["heart_disease"]],     # heart_disease
+        {"Yes":1, "No":0}[ud["hypertension"]],      # hypertension
+        {"Yes":1, "No":0}[ud["ever_married"]],      # ever_married
+        {"never smoked":0, "formerly smoked":1, "smokes":2}[ud["smoking_status"]],
+        {"Private":0, "Self-employed":1, "Govt_job":2, "Never_worked":3}[ud["work_type"]],
+        {"Male":0, "Female":1}[ud["gender"]],         # gender
+        age,                                              # age
+        glu,                                              # avg_glucose_level
+        age**2,                                           # age_sq
+        age * glu,                                        # interaction
+        glu**2                                            # glucose_sq
+    ]])
+
+    # ── Predict probability of stroke (class=1) ─────────────────────
+    probs = model.predict_proba(features)[0]
+    # ensure we pick the correct index for class '1'
+    classes = list(model.classes_)
+    pos_idx = classes.index(1)
+    prob_raw = probs[pos_idx]
     pct_disp = round(prob_raw * 100, 2)
 
     st.header("🧠 Stroke Percentage Risk")
-    st.write(f"Your estimated risk is **{pct_disp:.2f}%**")
-    st.warning("⚠️ Higher Risk Detected") if prob_raw > 0.5 else st.success("✔️ Lower Risk Detected")
+    st.write(f"Based on your inputs, your estimated risk is **{pct_disp:.2f}%**")
+    if prob_raw > 0.5:
+        st.warning("⚠️ Higher Risk Detected")
+    else:
+        st.success("✔️ Lower Risk Detected")
 
-    # ── Build feature vector from user_data ─────────────────────────
-    age = ud["age"]
-    glu = ud["avg_glucose_level"]
-    features = [
-        {"Yes":1, "No":0}[ud["heart_disease"]],
-        {"Yes":1, "No":0}[ud["hypertension"]],
-        {"Yes":1, "No":0}[ud["ever_married"]],
-        {"never smoked":0, "formerly smoked":1, "smokes":2}[ud["smoking_status"]],
-        {"Private":0, "Self-employed":1, "Govt_job":2, "Never_worked":3}[ud["work_type"]],
-        {"Male":0, "Female":1}[ud["gender"]],
-        age, glu, age**2, age * glu, glu**2
-    ]
-    X = np.array([features])
+    # ── Explain with SHAP KernelExplainer ───────────────────────────
+    explainer = get_shap_explainer(model, features.shape[1])
+    sv = explainer.shap_values(features, nsamples=100)
+    # extract class-1 contributions and flatten
+    if isinstance(sv, list) and len(sv) > 1:
+        shap_vals = np.array(sv[1]).reshape(-1)
+    else:
+        shap_vals = np.array(sv).reshape(-1)
 
-    # ── Compute SHAP values with model-agnostic explainer ─────────
-    explainer = get_shap_explainer(model, X.shape[1])
-    # compute shap values (list per class)
-    sv = explainer.shap_values(X, nsamples=100)
-    # extract shap values for class=1 (stroke)
-    shap_vals = sv[1][0] if isinstance(sv, list) else sv[0]
-
-    # ── Relative contributions for the first 8 features ─────────────
+    # ── Compute relative contributions for first 8 features ─────────
     abs_vals = np.abs(shap_vals[:8])
     contrib_pct = abs_vals / abs_vals.sum() * 100
     contrib_list = contrib_pct.tolist()
 
+    # ── Bar chart of SHAP contributions ──────────────────────────────
     feature_names = [
         "Heart Disease", "Hypertension", "Ever Married",
         "Smoking Status", "Work Type", "Gender",
@@ -99,8 +107,7 @@ if required_keys <= st.session_state.keys():
     palette = ["brown", "gold", "steelblue", "purple"]
     colors = [palette[i % 4] for i in range(len(feature_names))]
 
-    # ── Bar chart: feature contributions ──────────────────────────────
-    y_vals = contrib_list
+    y_vals = [float(v) for v in contrib_list]
     text_vals = [f"{v:.1f}%" for v in y_vals]
     fig_bar = go.Figure(go.Bar(
         x=feature_names,
@@ -144,9 +151,8 @@ if required_keys <= st.session_state.keys():
     with col2:
         if st.button("📘 Go to Recommendations"):
             st.switch_page("pages/Recommendations.py")
-
 else:
-    st.warning("Please complete the Risk Assessment first.")
+    st.warning("No input data found. Please complete the Risk Assessment first.")
 
 # ─────────────────────────── Footer ─────────────────────────────────
 st.markdown("""
@@ -167,7 +173,6 @@ st.markdown("""
     <p style='font-size:12px; margin-top:10px;'>Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
-
 
 
 
