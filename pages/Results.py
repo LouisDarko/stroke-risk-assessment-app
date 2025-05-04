@@ -28,17 +28,22 @@ st.markdown("""
   </div>
 """, unsafe_allow_html=True)
 
-# ──────────────────────── Load model ────────────────────────────────
+# ──────────────────────── Load pipeline or model ─────────────────────────
 @st.cache_resource
-def load_model():
+def load_pipeline_or_model():
     base = os.path.dirname(__file__)
+    pipe_path = os.path.join(base, "stroke_pipeline.pkl")
+    if os.path.exists(pipe_path):
+        return joblib.load(pipe_path), True  # pipeline, is_pipeline
+    # fall back to standalone model
     model_path = os.path.join(base, "best_stacking_model.pkl")
     if not os.path.exists(model_path):
-        st.error(f"⚠️ Model file not found at `{model_path}`")
+        st.error(f"⚠️ Neither stroke_pipeline.pkl nor best_stacking_model.pkl found in {base}")
         st.stop()
-    return joblib.load(model_path)
+    model = joblib.load(model_path)
+    return model, False
 
-model = load_model()
+model_or_pipeline, is_pipeline = load_pipeline_or_model()
 
 # ─────────────────── SHAP KernelExplainer Setup ─────────────────────
 @st.cache_resource
@@ -48,7 +53,7 @@ def get_explainer(_model, background):
 # ─────────────────────────── Main section ────────────────────────────
 if "user_data" in st.session_state:
     ud = st.session_state.user_data
-    # build raw feature vector
+    # build raw feature vector as in training
     age = ud["age"]; glu = ud["avg_glucose_level"]
     raw = np.array([[
         {"Yes":1, "No":0}[ud["heart_disease"]],
@@ -60,26 +65,23 @@ if "user_data" in st.session_state:
         age, glu, age**2, age*glu, glu**2
     ]], dtype=float)
 
-    # Min-Max scaling of all features to [0,1]
-    scaled = raw.copy()
-    # categoricals: divide by max
-    scaled[0,0] /= 1.0   # heart_disease (0/1)
-    scaled[0,1] /= 1.0   # hypertension
-    scaled[0,2] /= 1.0   # ever_married
-    scaled[0,3] /= 2.0   # smoking_status (0–2)
-    scaled[0,4] /= 3.0   # work_type (0–3)
-    scaled[0,5] /= 1.0   # gender
-    # numeric: use expected maxima
-    scaled[0,6] /= 100.0      # age
-    scaled[0,7] /= 200.0      # avg_glucose_level
-    scaled[0,8] /= (100.0**2) # age_sq
-    scaled[0,9] /= (100.0*200.0) # age_glucose
-    scaled[0,10] /= (200.0**2)  # glucose_sq
-    features = scaled
+    # predict probability
+    if is_pipeline:
+        probs = model_or_pipeline.predict_proba(raw)[0]
+        classes = model_or_pipeline.named_steps[next(iter(model_or_pipeline.named_steps[-1:]))].classes_
+    else:
+        # require scaler.pkl for manual transform
+        scaler_path = os.path.join(os.path.dirname(__file__), "scaler.pkl")
+        if os.path.exists(scaler_path):
+            scaler = joblib.load(scaler_path)
+            scaled = scaler.transform(raw)
+            probs = model_or_pipeline.predict_proba(scaled)[0]
+        else:
+            st.error("⚠️ scaler.pkl not found. Please export StandardScaler from your training notebook.")
+            st.stop()
+        classes = model_or_pipeline.classes_
 
-    # predict probability of stroke
-    probs = model.predict_proba(features)[0]
-    pos_idx = list(model.classes_).index(1)
+    pos_idx = list(classes).index(1)
     prob_raw = probs[pos_idx]
     pct_disp = round(prob_raw * 100, 2)
 
@@ -87,21 +89,18 @@ if "user_data" in st.session_state:
     st.write(f"Based on your inputs, your estimated risk is **{pct_disp:.2f}%**")
     st.warning("⚠️ Higher Risk Detected") if prob_raw > 0.5 else st.success("✔️ Lower Risk Detected")
 
-    # SHAP explanation with zero baseline
-    background = np.zeros((1, features.shape[1]))
-    explainer = get_explainer(model, background)
-    sv = explainer.shap_values(features, nsamples=100)
-    # get class-1 shap values and flatten
+    # SHAP explanations
+    explainer = get_explainer(model_or_pipeline, raw)
+    sv = explainer.shap_values(raw, nsamples=100)
+    # pick class-1 values and flatten
     if isinstance(sv, list) and len(sv) > 1:
         shap_vals = np.array(sv[1]).reshape(-1)
     else:
         shap_vals = np.array(sv).reshape(-1)
 
-    # compute absolute shap contributions
+    # contributions proportional to probability (not log-odds)
     abs_vals = np.abs(shap_vals[:8])
-    # scale to match predicted probability
     contrib_prob = abs_vals / abs_vals.sum() * prob_raw
-    # convert to percentages for chart
     y_vals = (contrib_prob * 100).tolist()
 
     feature_names = [
@@ -168,6 +167,7 @@ st.markdown("""
     <p style='font-size:12px; margin-top:10px;'>Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
+
 
 
 
