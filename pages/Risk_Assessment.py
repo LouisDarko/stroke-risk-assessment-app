@@ -44,97 +44,51 @@ scaler, model = load_artifacts()
 
 # ── Input Sections ─────────────────────────────────────────────────────────────
 with st.expander("👤 Personal Information", expanded=True):
-    age = st.number_input(
-        "Age", min_value=18, max_value=100,
-        value=18, step=1, format="%d", key="age"
-    )
-    gender = st.selectbox(
-        "Gender",
-        ["Select option", "Male", "Female"],
-        index=0, key="gender"
-    )
-    ever_married = st.selectbox(
-        "Ever Married?",
-        ["Select option", "Yes", "No"],
-        index=0, key="ever_married"
-    )
-    work_type = st.selectbox(
-        "Work Type",
-        ["Select option", "Private", "Self-employed", "Govt_job", "Never_worked"],
-        index=0, key="work_type"
-    )
+    age = st.number_input("Age", 18, 100, 18, key="age")
+    gender = st.selectbox("Gender", ["Select option", "Male", "Female"], key="gender")
+    ever_married = st.selectbox("Ever Married?", ["Select option", "Yes", "No"], key="ever_married")
+    work_type = st.selectbox("Work Type", ["Select option", "Private", "Self-employed", "Govt_job", "Never_worked"], key="work_type")
 
 with st.expander("🩺 Health Information", expanded=True):
-    hypertension = st.radio(
-        "Do you have hypertension?",
-        ["Select option", "Yes", "No"],
-        index=0, key="hypertension"
-    )
-    heart_disease = st.radio(
-        "Do you have heart disease?",
-        ["Select option", "Yes", "No"],
-        index=0, key="heart_disease"
-    )
-    avg_glucose_level = st.number_input(
-        "Average Glucose Level (mg/dL)",
-        min_value=0.0, value=55.0, step=0.1,
-        key="avg_glucose_level"
-    )
-    smoking_status = st.selectbox(
-        "Smoking Status",
-        ["Select option", "never smoked", "formerly smoked", "smokes"],
-        index=0, key="smoking_status"
-    )
+    hypertension = st.radio("Do you have hypertension?", ["Select option", "Yes", "No"], key="hypertension")
+    heart_disease = st.radio("Do you have heart disease?", ["Select option", "Yes", "No"], key="heart_disease")
+    avg_glucose_level = st.number_input("Average Glucose Level (mg/dL)", 0.0, 500.0, 55.0, step=0.1, key="avg_glucose_level")
+    smoking_status = st.selectbox("Smoking Status", ["Select option", "never smoked", "formerly smoked", "smokes"], key="smoking_status")
 
 # ── Consent & Disclaimer ───────────────────────────────────────────────────────
 st.markdown("### 📄 Consent and Disclaimer")
-st.write(
-    "This tool provides an estimate of stroke risk based on the information you provide. "
-    "It is not a diagnostic tool and should not replace professional medical advice. "
-    "By submitting, you agree to allow us to estimate your stroke risk."
-)
+st.write("This tool provides an estimate... By submitting, you agree to allow us to estimate your stroke risk.")
 st.checkbox("I agree to the terms and allow risk estimation", key="consent")
 
 # ── Calculate & Redirect ────────────────────────────────────────────────────────
 if st.button("Calculate Stroke Risk 📈"):
-    # basic validation
     if not st.session_state.consent:
         st.error("You must agree to the terms before proceeding!")
     elif (
-        st.session_state.gender       == "Select option"
-        or st.session_state.ever_married == "Select option"
-        or st.session_state.work_type    == "Select option"
-        or st.session_state.hypertension == "Select option"
-        or st.session_state.heart_disease== "Select option"
-        or st.session_state.smoking_status == "Select option"
-        or st.session_state.age < 18
-        or st.session_state.avg_glucose_level <= 0
+        st.session_state.gender        == "Select option" or
+        st.session_state.ever_married  == "Select option" or
+        st.session_state.work_type     == "Select option" or
+        st.session_state.hypertension  == "Select option" or
+        st.session_state.heart_disease == "Select option" or
+        st.session_state.smoking_status== "Select option" or
+        st.session_state.age < 18 or
+        st.session_state.avg_glucose_level <= 0
     ):
         st.error("Please complete all fields with valid values before submitting.")
     else:
-        # compute polynomial features
         age_val     = st.session_state.age
         glu_val     = st.session_state.avg_glucose_level
         age_sq      = age_val ** 2
         glu_sq      = glu_val ** 2
         interaction = age_val * glu_val
 
-        # encoding maps — updated per your specs:
+        # encoding maps
         gender_map  = {"Male": 1, "Female": 0}
         married_map = {"Yes": 1, "No": 0}
-        work_map    = {
-            "Private":        2, 
-            "Govt_job":       0, 
-            "Self-employed":  3, 
-            "Never_worked":   1
-        }
+        work_map    = {"Private": 2, "Govt_job": 0, "Self-employed": 3, "Never_worked": 1}
         htn_map     = {"Yes": 1, "No": 0}
         heart_map   = {"Yes": 1, "No": 0}
-        smoke_map   = {
-            "formerly smoked": 0,
-            "smokes":          2,
-            "never smoked":    1
-        }
+        smoke_map   = {"formerly smoked": 0, "smokes": 2, "never smoked": 1}
 
         # build feature vector
         features = np.array([
@@ -151,50 +105,17 @@ if st.button("Calculate Stroke Risk 📈"):
             glu_sq
         ], dtype=float).reshape(1, -1)
 
-        # scale before predicting
+        # scale & store
         features = scaler.transform(features)
+        st.session_state.user_scaled = features
 
-        # predict probability
+        # predict & store
         prob = model.predict_proba(features)[0][1]
-
-        # save for Results.py
-        st.session_state.user_data = {
-            "age": age_val,
-            "gender": st.session_state.gender,
-            "ever_married": st.session_state.ever_married,
-            "work_type": st.session_state.work_type,
-            "hypertension": st.session_state.hypertension,
-            "heart_disease": st.session_state.heart_disease,
-            "avg_glucose_level": glu_val,
-            "smoking_status": st.session_state.smoking_status
-        }
         st.session_state.prediction_prob = prob
 
-        # navigate to your Results page
-        st.switch_page("pages/Results.py")
+        # navigate
+        st.switch_page("Results")
 
-# ── Footer ────────────────────────────────────────────────────────────────────
-st.markdown("""
-  <style>
-    .custom-footer {
-      background-color: rgba(76,157,112,0.6); color: white;
-      padding: 30px 0; border-radius: 12px; margin-top: 40px;
-      text-align: center; font-size: 14px; width: 100%;
-    }
-    .custom-footer a { color: white; text-decoration: none; margin: 0 15px; }
-    .custom-footer a:hover { text-decoration: underline; }
-  </style>
-  <div class="custom-footer">
-      <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
-      <p>
-        <a href='/Home'>Home</a>
-        <a href='/Risk_Assessment'>Risk Assessment</a>
-        <a href='/Results'>Results</a>
-        <a href='/Recommendations'>Recommendations</a>
-      </p>
-      <p style="font-size:12px;">Developed by Victoria Mends</p>
-  </div>
-""", unsafe_allow_html=True)
 
 
 
