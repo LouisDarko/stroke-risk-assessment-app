@@ -102,9 +102,9 @@ if "user_scaled" in st.session_state and "prediction_prob" in st.session_state:
 
     # Navigation
     if st.button("🔙 Back to Risk Assessment"):
-        st.switch_page("Risk_Assessment")
+        st.switch_page("pages/Risk_Assessment.py")
     if st.button("📘 Go to Recommendations"):
-        st.switch_page("Recommendations")
+        st.switch_page("pages/Recommendations.py")
 
 else:
     st.warning("Please complete the Risk Assessment first.")
