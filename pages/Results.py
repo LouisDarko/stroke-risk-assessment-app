@@ -1,5 +1,9 @@
 import streamlit as st
-import os, joblib, numpy as np, shap, plotly.graph_objects as go
+import os
+import joblib
+import numpy as np
+import shap
+import plotly.graph_objects as go
 
 # ── Page config & CSS ─────────────────────────────────────────────────────────
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
@@ -15,9 +19,15 @@ st.title("📊 Stroke Risk Results")
 st.markdown("""
   <style>
     .custom-nav {
-      background: #e8f5e9; padding: 15px 0; border-radius: 10px;
-      display: flex; justify-content: center; gap: 60px; margin-bottom: 30px;
-      font-size: 18px; font-weight: 600;
+      background: #e8f5e9;
+      padding: 15px 0;
+      border-radius: 10px;
+      display: flex;
+      justify-content: center;
+      gap: 60px;
+      margin-bottom: 30px;
+      font-size: 18px;
+      font-weight: 600;
     }
     .custom-nav a { text-decoration: none; color: #4C9D70; }
     .custom-nav a:hover { color: #388e3c; text-decoration: underline; }
@@ -69,10 +79,7 @@ if "user_scaled" in st.session_state and "prediction_prob" in st.session_state:
     shap_vals = np.array(sv[1] if isinstance(sv, list) else sv).reshape(-1)
     abs_vals  = np.abs(shap_vals[:8])
     total     = abs_vals.sum()
-    if total == 0:
-        rel_pct = np.zeros_like(abs_vals)
-    else:
-        rel_pct = abs_vals / total * 100
+    rel_pct   = abs_vals / total * 100 if total else np.zeros_like(abs_vals)
 
     feats = [
       "Heart Disease","Hypertension","Ever Married",
@@ -84,7 +91,8 @@ if "user_scaled" in st.session_state and "prediction_prob" in st.session_state:
     ))
     fig_bar.update_layout(
         title="Relative Feature Contributions to Stroke Risk",
-        yaxis_title="Contribution (%)", xaxis_tickangle=-45
+        yaxis_title="Contribution (%)",
+        xaxis_tickangle=-45
     )
     st.plotly_chart(fig_bar, use_container_width=True)
 
@@ -100,7 +108,7 @@ if "user_scaled" in st.session_state and "prediction_prob" in st.session_state:
     ))
     st.plotly_chart(fig_gauge, use_container_width=True)
 
-    # Navigation
+    # Navigation buttons
     if st.button("🔙 Back to Risk Assessment"):
         st.switch_page("pages/Risk_Assessment.py")
     if st.button("📘 Go to Recommendations"):
@@ -113,8 +121,13 @@ else:
 st.markdown("""
   <style>
     .custom-footer {
-      background: rgba(76,157,112,0.6); color: white; padding: 30px 0;
-      border-radius: 12px; margin-top: 40px; text-align: center; font-size: 14px;
+      background: rgba(76,157,112,0.6);
+      color: white;
+      padding: 30px 0;
+      border-radius: 12px;
+      margin-top: 40px;
+      text-align: center;
+      font-size: 14px;
     }
     .custom-footer a { color: white; text-decoration: none; margin: 0 15px; }
     .custom-footer a:hover { text-decoration: underline; }
