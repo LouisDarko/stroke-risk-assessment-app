@@ -22,17 +22,11 @@ SCALER_SCALE = np.array([15.6753,  26.8145, 0.2141, 0.2206, 0.4974,
 
 # ── Load bare model ────────────────────────────────────────────────────────────
 @st.cache_resource
-def load_model():
-    base = os.path.dirname(os.path.abspath(__file__))
-    return joblib.load(os.path.join(base, "best_gb_model.pkl"))
+# ignore the model argument for hashing by using a leading underscore
+def load_explainer(_model):
+    return shap.TreeExplainer(_model)
 
-model = load_model()
-
-# ── SHAP explainer ─────────────────────────────────────────────────────────────
-@st.cache_resource
-def load_explainer(model):
-    return shap.TreeExplainer(model)
-
+# pass the trained model into explainer (parameter name starts with underscore, so it's not hashed)
 explainer = load_explainer(model)
 
 # ── Page config & CSS ─────────────────────────────────────────────────────────
@@ -84,7 +78,6 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     st.write("---")
 
     UD = st.session_state.user_data
-    # rebuild raw feature array in training order
     raw = [
         UD["age"],
         UD["avg_glucose_level"],
@@ -99,7 +92,6 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     X_poly   = add_poly(X_raw)
     X_scaled = (X_poly - SCALER_MEAN) / SCALER_SCALE
 
-    # compute SHAP values
     sv = explainer.shap_values(X_scaled)
     shap_vals = sv[1][0] if isinstance(sv, list) else sv[0]
     vals      = np.abs(shap_vals[:8])
@@ -112,7 +104,6 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     palette = ["brown","gold","steelblue","purple"]
     colors  = [palette[i % len(palette)] for i in range(len(feature_names))]
 
-    # Bar chart
     bar_fig = go.Figure(
         go.Bar(
             x=feature_names,
@@ -133,7 +124,6 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     )
     st.plotly_chart(bar_fig, use_container_width=True)
 
-    # Gauge chart
     r = int(255 * prob)
     g = int(255 * (1 - prob))
     bar_color = f"rgb({r},{g},0)"
@@ -162,7 +152,6 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     )
     st.plotly_chart(gauge_fig, use_container_width=True)
 
-    # Navigation buttons
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🔙 Back to Assessment"):
@@ -174,10 +163,9 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
 else:
     st.warning("No input data found. Please complete the Risk Assessment first.")
 
-# ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
   <style>
-    .custom-footer { background-color: rgba(76,157,112,0.6); color: white; padding: 30px 0; border-radius: 12px; margin-top: 40px; text-align: center; font-size: 14px; }
+    .custom-footer { background-color: rgba(76,157,112,0.6); color: white; padding: 30px 0; border-radius: 12px; margin-top: 40px; text-align: center; font-size: 14px; width: 100%; }
     .custom-footer a { color: white; text-decoration: none; margin: 0 15px; }
     .custom-footer a:hover { text-decoration: underline; }
   </style>
@@ -187,7 +175,6 @@ st.markdown("""
       <p style="font-size:12px;">Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
-
 
 
 
