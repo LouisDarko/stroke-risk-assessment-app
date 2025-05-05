@@ -510,6 +510,11 @@ if st.button("Calculate Stroke Risk 📈"):
 
         # predict probability
         prob = model.predict_proba(features)[0][1]
++       # scale features exactly as during training
++       features = scaler.transform(features)
++       # predict probability on the scaled data
++        
+        prob = model.predict_proba(features)[0][1]
 
         # save for Results.py
         st.session_state.user_data       = {
