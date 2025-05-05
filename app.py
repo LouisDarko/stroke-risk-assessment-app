@@ -213,7 +213,6 @@ Stroke Statistics:
 """
 
 # Audio narration
-```python
 def generate_audio(text, filename="full_page.mp3"):
     tts = gTTS(text, lang='en')
     tts.save(filename)
@@ -227,7 +226,6 @@ def generate_audio(text, filename="full_page.mp3"):
     )
 
 generate_audio(full_page_text)
-```
 
 # Info Cards
 def info_card(icon, title, content):
