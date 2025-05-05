@@ -9,23 +9,67 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
 st.markdown("""
     <style>
+      /* Hide Streamlit default chrome */
       #MainMenu, footer, header {visibility: hidden;}
       [data-testid="stSidebar"], [data-testid="collapsedControl"] {display: none;}
+
+      /* Header bar */
+      .header-container {
+        background: #4C9D70;
+        padding: 15px 0;
+        text-align: center;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+      .header-container h1 {
+        color: white;
+        margin: 0;
+      }
+
+      /* Navigation bar */
+      .custom-nav {
+        background: #E8F5E9;
+        padding: 10px;
+        border-radius: 8px;
+        display: flex;
+        justify-content: center;
+        gap: 40px;
+        margin-bottom: 30px;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .custom-nav a {
+        text-decoration: none;
+        color: #4C9D70;
+      }
+      .custom-nav a:hover {
+        color: #388E3C;
+        text-decoration: underline;
+      }
+
+      /* Dark‐mode overrides */
+      @media (prefers-color-scheme: dark) {
+        .header-container {
+          background: #1f2c2f !important;
+        }
+        .custom-nav {
+          background: #2c2c2e !important;
+        }
+        .custom-nav a {
+          color: #ddd !important;
+        }
+        .custom-nav a:hover {
+          color: #fff !important;
+        }
+      }
     </style>
 """, unsafe_allow_html=True)
 
 # ── Title & Navbar ─────────────────────────────────────────────────────────────
-st.title("📊 Stroke Risk Results")
 st.markdown("""
-  <style>
-    .custom-nav {
-      background: #e8f5e9; padding: 15px 0; border-radius: 10px;
-      display: flex; justify-content: center; gap: 60px; margin-bottom: 30px;
-      font-size: 18px; font-weight: 600;
-    }
-    .custom-nav a { text-decoration: none; color: #4C9D70; }
-    .custom-nav a:hover { color: #388e3c; text-decoration: underline; }
-  </style>
+  <div class="header-container">
+    <h1>📊 Stroke Risk Results</h1>
+  </div>
   <div class="custom-nav">
     <a href='/Home'>Home</a>
     <a href='/Risk_Assessment'>Risk Assessment</a>
@@ -38,11 +82,11 @@ st.markdown("""
 @st.cache_resource
 def load_model():
     base = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.join(base, "best_gb_model.pkl")
-    if not os.path.exists(model_path):
-        st.error(f"⚠️ Model file not found at:\n`{model_path}`")
+    path = os.path.join(base, "best_gb_model.pkl")
+    if not os.path.exists(path):
+        st.error(f"⚠️ Model not found at `{path}`")
         st.stop()
-    return joblib.load(model_path)
+    return joblib.load(path)
 
 model = load_model()
 
@@ -53,98 +97,93 @@ def get_explainer(_model):
 
 explainer = get_explainer(model)
 
-# ── Display results & SHAP-based contributions ─────────────────────────────────
+# ── Display results & SHAP contributions ───────────────────────────────────────
 if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     prob = st.session_state.prediction_prob
 
-    st.header("🧠 Stroke Percentage Risk")
-    st.write(f"Based on your inputs, your estimated risk is **{prob * 100:.2f}%**")
+    st.markdown(f"### 🧠 Your Estimated Stroke Risk: **{prob*100:.2f}%**")
+    st.write("---")
 
-    if prob > 0.5:
-        st.warning("⚠️ Higher Risk of Stroke Detected")
-    else:
-        st.success("✔️ Lower Risk of Stroke Detected")
-
-    # Reconstruct the full 11-feature input
+    # rebuild feature vector
     UD = st.session_state.user_data
-    age = UD["age"]
-    glu = UD["avg_glucose_level"]
-    age_sq = age ** 2
-    glu_sq = glu ** 2
+    age, glu = UD["age"], UD["avg_glucose_level"]
+    age_sq, glu_sq = age**2, glu**2
     interaction = age * glu
 
-    full_X = np.array([[
-        {"Yes": 1, "No": 0}[UD["heart_disease"]],
-        {"Yes": 1, "No": 0}[UD["hypertension"]],
-        {"Yes": 1, "No": 0}[UD["ever_married"]],
-        {"never smoked": 0, "formerly smoked": 1, "smokes": 2}[UD["smoking_status"]],
-        {"Private": 0, "Self-employed": 1, "Govt_job": 2, "Never_worked": 3}[UD["work_type"]],
-        {"Male": 0, "Female": 1}[UD["gender"]],
-        age, glu, age_sq, interaction, glu_sq
+    X = np.array([[
+      {"Yes":1,"No":0}[UD["heart_disease"]],
+      {"Yes":1,"No":0}[UD["hypertension"]],
+      {"Yes":1,"No":0}[UD["ever_married"]],
+      {"never smoked":0,"formerly smoked":1,"smokes":2}[UD["smoking_status"]],
+      {"Private":0,"Self-employed":1,"Govt_job":2,"Never_worked":3}[UD["work_type"]],
+      {"Male":0,"Female":1}[UD["gender"]],
+      age, glu, age_sq, interaction, glu_sq
     ]])
 
-    sv = explainer.shap_values(full_X)
-    shap_vals_full = sv[1][0] if isinstance(sv, list) else sv[0]
-
-    raw8 = shap_vals_full[:8]
-    abs8 = np.abs(raw8)
-    contrib = abs8 / abs8.sum() * prob
+    sv = explainer.shap_values(X)
+    shap_vals = sv[1][0] if isinstance(sv, list) else sv[0]
+    vals = np.abs(shap_vals[:8])
+    contrib = vals / vals.sum() * prob
 
     feature_names = [
-        "Heart Disease", "Hypertension", "Ever Married",
-        "Smoking Status", "Work Type", "Gender",
-        "Age", "Avg Glucose"
+      "Heart Disease", "Hypertension", "Ever Married",
+      "Smoking Status", "Work Type", "Gender",
+      "Age", "Avg Glucose"
     ]
-
-    # Cycle through the four requested colors
-    palette = ["brown", "gold", "steelblue", "purple"]
+    palette = ["brown","gold","steelblue","purple"]
     colors = [palette[i % len(palette)] for i in range(len(feature_names))]
 
-    # Bar chart of contributions
-    fig = go.Figure(
-        go.Bar(
-            x=feature_names,
-            y=contrib * 100,
-            marker=dict(color=colors),
-            text=[f"{v * 100:.2f}%" for v in contrib],
-            textposition="auto",
-            hovertemplate="<b>%{x}</b><br>Contribution: %{y:.2f}%<extra></extra>"
-        )
+    # ── Bar chart with transparent bg ──────────────────────────────────────────
+    bar = go.Figure(go.Bar(
+        x=feature_names, y=contrib*100,
+        marker=dict(color=colors),
+        text=[f"{v*100:.2f}%" for v in contrib],
+        textposition="outside"
+    ))
+    bar.update_layout(
+        yaxis_title="Contribution (%)",
+        xaxis_tickangle=-45,
+        margin=dict(t=60,b=140),
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)"
     )
-    fig.update_layout(
-        title="How Each Input Contributed to Your Total Risk",
-        yaxis=dict(title="Contribution to Risk (%)"),
-        xaxis=dict(tickangle=-45),
-        margin=dict(t=60, b=120)
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(bar, use_container_width=True)
 
-    # ── New Gauge Visualization ────────────────────────────────────────────────
-    gauge_fig = go.Figure(
-        go.Indicator(
-            mode="gauge+number",
-            value=prob * 100,
-            title={'text': "Overall Stroke Risk (%)"},
-            gauge={
-                'axis': {'range': [0, 100]},
-                'bar': {'color': "purple"},
-                'steps': [
-                    {'range': [0, 50], 'color': "lightgray"},
-                    {'range': [50, 100], 'color': "gray"}
-                ]
-            }
-        )
+    # ── Gauge chart with transparent bg ───────────────────────────────────────
+    gauge = go.Figure(go.Indicator(
+        mode="gauge+number+delta",
+        value=prob*100,
+        delta={'reference':50,'increasing':{'color':'red'},'decreasing':{'color':'green'}},
+        title={'text':"Overall Stroke Risk (%)"},
+        gauge={
+          'axis':{'range':[0,100]},
+          'bar':{'color':"purple"},
+          'steps':[
+            {'range':[0,25],'color':"steelblue"},
+            {'range':[25,50],'color':"gold"},
+            {'range':[50,75],'color':"brown"},
+            {'range':[75,100],'color':"purple"}
+          ],
+          'threshold':{
+            'line':{'color':'red','width':4},
+            'thickness':0.75,'value':prob*100
+          }
+        }
+    ))
+    gauge.update_layout(
+        margin=dict(t=40,b=0,l=0,r=0),
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)"
     )
-    gauge_fig.update_layout(margin=dict(t=40, b=0, l=0, r=0))
-    st.plotly_chart(gauge_fig, use_container_width=True)
+    st.plotly_chart(gauge, use_container_width=True)
 
-    # Navigation Buttons
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🔙 Back to Risk Assessment"):
+    # ── Navigation ──────────────────────────────────────────────────────────────
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("🔙 Back to Assessment"):
             st.switch_page("pages/Risk_Assessment.py")
-    with col2:
-        if st.button("📘 Go to Recommendations"):
+    with c2:
+        if st.button("📘 Recommendations"):
             st.switch_page("pages/Recommendations.py")
 
 else:
@@ -155,29 +194,26 @@ st.markdown("""
   <style>
     .custom-footer {
       background-color: rgba(76,157,112,0.6);
-      color: white; padding: 30px 0;
-      border-radius: 12px; margin-top: 40px;
-      text-align: center; font-size: 14px; width: 100%;
+      color: white; padding: 20px; border-radius: 8px;
+      margin-top: 40px; text-align: center; font-size: 14px;
     }
     .custom-footer a {
-      color: white; text-decoration: none; margin: 0 15px;
+      color: white; text-decoration: none; margin: 0 10px;
     }
     .custom-footer a:hover {
       text-decoration: underline;
     }
   </style>
   <div class="custom-footer">
-    <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
+    <p>&copy; 2025 Stroke Risk Assessment Tool | Developed by Victoria Mends</p>
     <p>
-      <a href='/Home'>Home</a>
-      <a href='/Risk_Assessment'>Risk Assessment</a>
-      <a href='/Results'>Results</a>
+      <a href='/Home'>Home</a> •
+      <a href='/Risk_Assessment'>Assessment</a> •
+      <a href='/Results'>Results</a> •
       <a href='/Recommendations'>Recommendations</a>
     </p>
-    <p style="font-size:12px; margin-top:10px;">Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
-
 
 
 
