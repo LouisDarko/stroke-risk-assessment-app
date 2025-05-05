@@ -1,5 +1,3 @@
-# pages/Results.py
-
 import os
 import joblib
 import streamlit as st
@@ -7,23 +5,54 @@ import numpy as np
 import shap
 import plotly.graph_objects as go
 
-# ── Page config & hide defaults ────────────────────────────────────────────────
+# ── Polynomial feature helper ─────────────────────────────────────────────────
+def add_poly(X):
+    age       = X[:, 0]
+    glu       = X[:, 1]
+    age_sq    = age ** 2
+    inter     = age * glu
+    glu_sq    = glu ** 2
+    return np.c_[X, age_sq, inter, glu_sq]
+
+# ── Scaler parameters from training ────────────────────────────────────────────
+SCALER_MEAN  = np.array([47.4572, 106.1478, 0.0482, 0.0513, 0.5527,
+                         0.5431,   2.1356,   0.5064, 1850.37, 5067.84, 11645.2])
+SCALER_SCALE = np.array([15.6753,  26.8145, 0.2141, 0.2206, 0.4974,
+                         0.4983,   0.9082,   0.4999, 2978.41, 6144.78, 10795.6])
+
+# ── Load bare model ────────────────────────────────────────────────────────────
+@st.cache_resource
+def load_model():
+    base = os.path.dirname(os.path.abspath(__file__))
+    return joblib.load(os.path.join(base, "best_gb_model.pkl"))
+
+model = load_model()
+
+# ── SHAP explainer ─────────────────────────────────────────────────────────────
+@st.cache_resource
+def load_explainer(model):
+    return shap.TreeExplainer(model)
+
+explainer = load_explainer(model)
+
+# ── Page config & CSS ─────────────────────────────────────────────────────────
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
 st.markdown("""
     <style>
       #MainMenu, footer, header {visibility: hidden;}
       [data-testid="stSidebar"], [data-testid="collapsedControl"] {display: none;}
-
-      .header-container { background: #4C9D70; padding: 15px 0; text-align: center;
-                          border-radius: 8px; margin-bottom: 20px; }
+      .header-container {
+        background: #4C9D70; padding: 15px 0; text-align: center;
+        border-radius: 8px; margin-bottom: 20px;
+      }
       .header-container h1 { color: white; margin: 0; }
-
-      .custom-nav { background: #E8F5E9; padding: 10px; border-radius: 8px;
-                    display: flex; justify-content: center; gap: 40px;
-                    margin-bottom: 30px; font-size: 16px; font-weight: 600; }
+      .custom-nav {
+        background: #E8F5E9; padding: 10px; border-radius: 8px;
+        display: flex; justify-content: center; gap: 40px;
+        margin-bottom: 30px; font-size: 16px; font-weight: 600;
+      }
       .custom-nav a { text-decoration: none; color: #4C9D70; }
       .custom-nav a:hover { color: #388E3C; text-decoration: underline; }
-
       @media (prefers-color-scheme: dark) {
         .header-container { background: #1f2c2f !important; }
         .custom-nav { background: #2c2c2e !important; }
@@ -33,7 +62,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ── Title & Navbar ─────────────────────────────────────────────────────────────
+# ── Header & Navbar ───────────────────────────────────────────────────────────
 st.markdown("""
   <div class="header-container">
     <h1>📊 Stroke Risk Results</h1>
@@ -46,20 +75,6 @@ st.markdown("""
   </div>
 """, unsafe_allow_html=True)
 
-# ── Load full pipeline & explainer ─────────────────────────────────────────────
-@st.cache_resource
-def load_pipeline():
-    base = os.path.dirname(os.path.abspath(__file__))
-    return joblib.load(os.path.join(base, "best_gb_pipeline.pkl"))
-
-@st.cache_resource
-def load_explainer(pipeline):
-    model = pipeline.named_steps["gb"]
-    return shap.TreeExplainer(model)
-
-pipeline  = load_pipeline()
-explainer = load_explainer(pipeline)
-
 # ── Display results & SHAP contributions ───────────────────────────────────────
 if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     prob = st.session_state.prediction_prob
@@ -69,28 +84,26 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     st.write("---")
 
     UD = st.session_state.user_data
-    # rebuild raw feature array
-    raw_list = [
+    # rebuild raw feature array in training order
+    raw = [
         UD["age"],
         UD["avg_glucose_level"],
-        {"Yes":1,"No":0}[UD["heart_disease"]],
-        {"Yes":1,"No":0}[UD["hypertension"]],
-        {"Yes":1,"No":0}[UD["ever_married"]],
-        {"never smoked":0,"formerly smoked":1,"smokes":2}[UD["smoking_status"]],
-        {"Private":0,"Self-employed":1,"Govt_job":2,"Never_worked":4}[UD["work_type"]],
-        {"Male":0,"Female":1}[UD["gender"]]
+        1 if UD["heart_disease"] == "Yes" else 0,
+        1 if UD["hypertension"] == "Yes" else 0,
+        1 if UD["ever_married"] == "Yes" else 0,
+        {"never smoked":0, "formerly smoked":1, "smokes":2}[UD["smoking_status"]],
+        {"Private":0, "Self-employed":1, "Govt_job":2, "Never_worked":3}[UD["work_type"]],
+        {"Male":0, "Female":1}[UD["gender"]]
     ]
-    X_raw = np.array(raw_list).reshape(1, -1)
+    X_raw    = np.array(raw).reshape(1, -1)
+    X_poly   = add_poly(X_raw)
+    X_scaled = (X_poly - SCALER_MEAN) / SCALER_SCALE
 
-    # apply polynomial & scaling (skip SMOTE at inference)
-    X_poly   = pipeline.named_steps["poly"].transform(X_raw)
-    X_scaled = pipeline.named_steps["scale"].transform(X_poly)
-
-    # SHAP values
+    # compute SHAP values
     sv = explainer.shap_values(X_scaled)
     shap_vals = sv[1][0] if isinstance(sv, list) else sv[0]
-    vals     = np.abs(shap_vals[:8])
-    contrib  = vals / vals.sum() * prob
+    vals      = np.abs(shap_vals[:8])
+    contrib   = vals / vals.sum() * prob
 
     feature_names = [
       "Age", "Avg Glucose", "Heart Disease", "Hypertension",
@@ -164,22 +177,206 @@ else:
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
   <style>
-    .custom-footer { background: rgba(76,157,112,0.6); color: white; padding: 30px 0;
-                     border-radius: 12px; margin-top: 40px; text-align: center; font-size: 14px; }
+    .custom-footer { background-color: rgba(76,157,112,0.6); color: white; padding: 30px 0; border-radius: 12px; margin-top: 40px; text-align: center; font-size: 14px; }
     .custom-footer a { color: white; text-decoration: none; margin: 0 15px; }
     .custom-footer a:hover { text-decoration: underline; }
   </style>
-  <div class='custom-footer'>
-    <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
-    <p>
-      <a href='/Home'>Home</a>
-      <a href='/Risk_Assessment'>Risk Assessment</a>
-      <a href='/Results'>Results</a>
-      <a href='/Recommendations'>Recommendations</a>
-    </p>
-    <p style='font-size:12px; margin-top:10px;'>Developed by Victoria Mends</p>
+  <div class="custom-footer">
+      <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
+      <p><a href='/Home'>Home</a> <a href='/Risk_Assessment'>Risk Assessment</a> <a href='/Results'>Results</a> <a href='/Recommendations'>Recommendations</a></p>
+      <p style="font-size:12px;">Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
+
+
+
+
+
+
+
+
+# # pages/Results.py
+
+# import os
+# import joblib
+# import streamlit as st
+# import numpy as np
+# import shap
+# import plotly.graph_objects as go
+
+# # ── Page config & hide defaults ────────────────────────────────────────────────
+# st.set_page_config(page_title="Stroke Risk Results", layout="wide")
+# st.markdown("""
+#     <style>
+#       #MainMenu, footer, header {visibility: hidden;}
+#       [data-testid="stSidebar"], [data-testid="collapsedControl"] {display: none;}
+
+#       .header-container { background: #4C9D70; padding: 15px 0; text-align: center;
+#                           border-radius: 8px; margin-bottom: 20px; }
+#       .header-container h1 { color: white; margin: 0; }
+
+#       .custom-nav { background: #E8F5E9; padding: 10px; border-radius: 8px;
+#                     display: flex; justify-content: center; gap: 40px;
+#                     margin-bottom: 30px; font-size: 16px; font-weight: 600; }
+#       .custom-nav a { text-decoration: none; color: #4C9D70; }
+#       .custom-nav a:hover { color: #388E3C; text-decoration: underline; }
+
+#       @media (prefers-color-scheme: dark) {
+#         .header-container { background: #1f2c2f !important; }
+#         .custom-nav { background: #2c2c2e !important; }
+#         .custom-nav a { color: #ddd !important; }
+#         .custom-nav a:hover { color: #fff !important; }
+#       }
+#     </style>
+# """, unsafe_allow_html=True)
+
+# # ── Title & Navbar ─────────────────────────────────────────────────────────────
+# st.markdown("""
+#   <div class="header-container">
+#     <h1>📊 Stroke Risk Results</h1>
+#   </div>
+#   <div class="custom-nav">
+#     <a href='/Home'>Home</a>
+#     <a href='/Risk_Assessment'>Risk Assessment</a>
+#     <a href='/Results'>Results</a>
+#     <a href='/Recommendations'>Recommendations</a>
+#   </div>
+# """, unsafe_allow_html=True)
+
+# # ── Load full pipeline & explainer ─────────────────────────────────────────────
+# @st.cache_resource
+# def load_pipeline():
+#     base = os.path.dirname(os.path.abspath(__file__))
+#     return joblib.load(os.path.join(base, "best_gb_pipeline.pkl"))
+
+# @st.cache_resource
+# def load_explainer(pipeline):
+#     model = pipeline.named_steps["gb"]
+#     return shap.TreeExplainer(model)
+
+# pipeline  = load_pipeline()
+# explainer = load_explainer(pipeline)
+
+# # ── Display results & SHAP contributions ───────────────────────────────────────
+# if "user_data" in st.session_state and "prediction_prob" in st.session_state:
+#     prob = st.session_state.prediction_prob
+#     pct  = prob * 100
+
+#     st.markdown(f"### 🧠 Your Stroke Percentage Risk: **{pct:.2f}%**")
+#     st.write("---")
+
+#     UD = st.session_state.user_data
+#     # rebuild raw feature array
+#     raw_list = [
+#         UD["age"],
+#         UD["avg_glucose_level"],
+#         {"Yes":1,"No":0}[UD["heart_disease"]],
+#         {"Yes":1,"No":0}[UD["hypertension"]],
+#         {"Yes":1,"No":0}[UD["ever_married"]],
+#         {"never smoked":0,"formerly smoked":1,"smokes":2}[UD["smoking_status"]],
+#         {"Private":0,"Self-employed":1,"Govt_job":2,"Never_worked":4}[UD["work_type"]],
+#         {"Male":0,"Female":1}[UD["gender"]]
+#     ]
+#     X_raw = np.array(raw_list).reshape(1, -1)
+
+#     # apply polynomial & scaling (skip SMOTE at inference)
+#     X_poly   = pipeline.named_steps["poly"].transform(X_raw)
+#     X_scaled = pipeline.named_steps["scale"].transform(X_poly)
+
+#     # SHAP values
+#     sv = explainer.shap_values(X_scaled)
+#     shap_vals = sv[1][0] if isinstance(sv, list) else sv[0]
+#     vals     = np.abs(shap_vals[:8])
+#     contrib  = vals / vals.sum() * prob
+
+#     feature_names = [
+#       "Age", "Avg Glucose", "Heart Disease", "Hypertension",
+#       "Ever Married", "Smoking Status", "Work Type", "Gender"
+#     ]
+#     palette = ["brown","gold","steelblue","purple"]
+#     colors  = [palette[i % len(palette)] for i in range(len(feature_names))]
+
+#     # Bar chart
+#     bar_fig = go.Figure(
+#         go.Bar(
+#             x=feature_names,
+#             y=contrib * 100,
+#             marker=dict(color=colors),
+#             text=[f"{v*100:.2f}%" for v in contrib],
+#             textposition="outside"
+#         )
+#     )
+#     bar_fig.update_layout(
+#         template="plotly_white",
+#         title="How Each Input Contributed to Your Total Risk",
+#         yaxis=dict(title="Contribution to Risk (%)", range=[0,100], ticksuffix="%"),
+#         xaxis=dict(tickangle=-45),
+#         margin=dict(t=60, b=120),
+#         plot_bgcolor="rgba(0,0,0,0)",
+#         paper_bgcolor="rgba(0,0,0,0)"
+#     )
+#     st.plotly_chart(bar_fig, use_container_width=True)
+
+#     # Gauge chart
+#     r = int(255 * prob)
+#     g = int(255 * (1 - prob))
+#     bar_color = f"rgb({r},{g},0)"
+
+#     gauge_fig = go.Figure(
+#         go.Indicator(
+#             mode="gauge+number",
+#             value=pct,
+#             number={'suffix': "%"},
+#             title={'text': "Overall Stroke Risk (%)"},
+#             gauge={
+#                 'axis': {'range': [0,100], 'ticksuffix': '%'},
+#                 'bar': {'color': bar_color},
+#                 'steps': [
+#                     {'range': [0,50],  'color': 'green'},
+#                     {'range': [50,100],'color': 'red'}
+#                 ]
+#             }
+#         )
+#     )
+#     gauge_fig.update_layout(
+#         template="plotly_white",
+#         margin=dict(t=40, b=0, l=0, r=0),
+#         plot_bgcolor="rgba(0,0,0,0)",
+#         paper_bgcolor="rgba(0,0,0,0)"
+#     )
+#     st.plotly_chart(gauge_fig, use_container_width=True)
+
+#     # Navigation buttons
+#     col1, col2 = st.columns(2)
+#     with col1:
+#         if st.button("🔙 Back to Assessment"):
+#             st.switch_page("pages/Risk_Assessment.py")
+#     with col2:
+#         if st.button("📘 Recommendations"):
+#             st.switch_page("pages/Recommendations.py")
+
+# else:
+#     st.warning("No input data found. Please complete the Risk Assessment first.")
+
+# # ── Footer ────────────────────────────────────────────────────────────────────
+# st.markdown("""
+#   <style>
+#     .custom-footer { background: rgba(76,157,112,0.6); color: white; padding: 30px 0;
+#                      border-radius: 12px; margin-top: 40px; text-align: center; font-size: 14px; }
+#     .custom-footer a { color: white; text-decoration: none; margin: 0 15px; }
+#     .custom-footer a:hover { text-decoration: underline; }
+#   </style>
+#   <div class='custom-footer'>
+#     <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
+#     <p>
+#       <a href='/Home'>Home</a>
+#       <a href='/Risk_Assessment'>Risk Assessment</a>
+#       <a href='/Results'>Results</a>
+#       <a href='/Recommendations'>Recommendations</a>
+#     </p>
+#     <p style='font-size:12px; margin-top:10px;'>Developed by Victoria Mends</p>
+#   </div>
+# """, unsafe_allow_html=True)
 
 
 
