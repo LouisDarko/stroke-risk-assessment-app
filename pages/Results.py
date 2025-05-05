@@ -92,7 +92,7 @@ explainer = get_explainer(model)
 if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     prob = st.session_state.prediction_prob
 
-    st.markdown(f"### 🧠 Your Estimated Stroke Risk: **{prob*100:.2f}%**")
+    st.markdown(f"### 🧠 Your Stroke Percentage Risk: **{prob*100:.2f}%**")
     st.write("---")
 
     # rebuild feature vector
