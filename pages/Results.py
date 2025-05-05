@@ -1,82 +1,140 @@
 import streamlit as st
-import joblib
-import os
-import numpy as np
-import shap
-import plotly.graph_objects as go
+import os, joblib, numpy as np, pandas as pd, shap, plotly.graph_objects as go
+from sklearn.preprocessing import StandardScaler
 
-# ── Page config & CSS ─────────────────────────────────────────────────────────
+# ───────────────────────── Page config & CSS ─────────────────────────
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
 st.markdown("""
   <style>
-    #MainMenu, footer, header {visibility: hidden;}
-    [data-testid="stSidebar"], [data-testid="collapsedControl"] {display: none;}
+    #MainMenu, footer, header { visibility: hidden; }
+    [data-testid="stSidebar"], [data-testid="collapsedControl"] { display: none; }
   </style>
 """, unsafe_allow_html=True)
 
-# ── Load artifacts ─────────────────────────────────────────────────────────────
+# ───────────────────────── Title & Navbar ────────────────────────────
+st.title("📊 Stroke Risk Results")
+st.markdown("""
+  <style>
+    .custom-nav { background: #e8f5e9; padding: 15px 0; border-radius: 10px;
+                 display: flex; justify-content: center; gap: 60px; margin-bottom: 30px;
+                 font-size: 18px; font-weight: 600; }
+    .custom-nav a { text-decoration: none; color: #4C9D70; }
+    .custom-nav a:hover { color: #388e3c; text-decoration: underline; }
+  </style>
+  <div class="custom-nav">
+    <a href='/Home'>Home</a>
+    <a href='/Risk_Assessment'>Risk Assessment</a>
+    <a href='/Results'>Results</a>
+    <a href='/Recommendations'>Recommendations</a>
+  </div>
+""", unsafe_allow_html=True)
+
+# ─────────────────── Load scaler & GB model ─────────────────────
 @st.cache_resource
-def load_artifacts():
-    base = os.path.dirname(os.path.abspath(__file__))
-    scaler = joblib.load(os.path.join(base, "scaler.pkl"))
-    model  = joblib.load(os.path.join(base, "best_gb_model.pkl"))
+def load_scaler_and_model():
+    base = os.path.dirname(__file__)
+    scaler_path = os.path.join(base, "scaler.pkl")
+    model_path  = os.path.join(base, "best_gb_model.pkl")
+    if not os.path.exists(scaler_path) or not os.path.exists(model_path):
+        st.error("⚠️ Missing scaler.pkl or best_gb_model.pkl in app directory.")
+        st.stop()
+    scaler = joblib.load(scaler_path)
+    model  = joblib.load(model_path)
     return scaler, model
 
-scaler, model = load_artifacts()
+scaler, model = load_scaler_and_model()
 
-# ── SHAP Explainer ─────────────────────────────────────────────────────────────
+# ─────────────────── SHAP Explainer Setup ─────────────────────
 @st.cache_resource
 def get_explainer(_model):
-    background = np.zeros((1, model.n_features_in_))
+    background = np.zeros((1, 11))
     return shap.KernelExplainer(_model.predict_proba, background)
 
 explainer = get_explainer(model)
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# ─────────────────────────── Main ────────────────────────────
 if "user_scaled" in st.session_state and "prediction_prob" in st.session_state:
+    # read back what you stored
     features = st.session_state.user_scaled
     prob     = st.session_state.prediction_prob
     pred     = int(prob >= 0.5)
 
-    # ── DEBUG ────────────────────────────────────────────────────────────────
-    st.write("🔍 DEBUG features:", features.tolist())
-    st.write("🔍 DEBUG probability:", f"{prob:.6f}")
-    # ────────────────────────────────────────────────────────────────────────────
+    # ── DEBUG: inspect exactly what went in ─────────────────────────
+    st.write("🔍 DEBUG scaled features:", features.tolist())
+    st.write("🔍 DEBUG predicted probability:", f"{prob:.6f}")
+    st.write("🔍 DEBUG model classes:", model.classes_.tolist())
+    # ────────────────────────────────────────────────────────────────
 
-    if pred:
-        st.error(f"⚠️ High risk of stroke — **{prob:.1%}**")
+    # Display risk
+    if pred == 1:
+        st.error(f"⚠️ High risk of stroke.\n\n**Probability:** {prob:.2%}")
     else:
-        st.success(f"✅ Low risk of stroke — **{prob:.1%}**")
+        st.success(f"✅ Low risk of stroke.\n\n**Probability:** {prob:.2%}")
 
     # SHAP contributions
-    shap_vals = np.array(explainer.shap_values(features, nsamples=100)[1]).reshape(-1)
+    sv = explainer.shap_values(features, nsamples=100)
+    shap_vals = np.array(sv[1] if isinstance(sv, list) else sv).reshape(-1)
     abs_vals  = np.abs(shap_vals[:8])
     rel_pct   = abs_vals / abs_vals.sum() * 100
-    feats     = ["Heart Disease","Hypertension","Ever Married","Smoking Status","Work Type","Gender","Age","Avg Glucose"]
+    feats     = [
+      "Heart Disease","Hypertension","Ever Married",
+      "Smoking Status","Work Type","Gender","Age","Avg Glucose"
+    ]
 
     fig_bar = go.Figure(go.Bar(
         x=feats, y=rel_pct,
-        text=[f"{v:.1f}%" for v in rel_pct], textposition="auto"
+        text=[f"{v:.1f}%" for v in rel_pct], textposition="auto",
+        hovertemplate="<b>%{x}</b><br>Contribution: %{y:.1f}%<extra></extra>"
     ))
-    fig_bar.update_layout(title="Feature Contributions", yaxis_title="%", xaxis_tickangle=-45)
+    fig_bar.update_layout(
+        title="Relative Feature Contributions to Stroke Risk",
+        yaxis_title="Contribution (%)", xaxis_tickangle=-45,
+        margin=dict(t=60,b=120)
+    )
     st.plotly_chart(fig_bar, use_container_width=True)
 
-    # Gauge
+    # Gauge chart
     fig_gauge = go.Figure(go.Indicator(
         mode="gauge+number", value=prob*100,
         title={'text':"Overall Stroke Risk (%)"},
-        gauge={'axis':{'range':[0,100]}, 'steps':[{'range':[0,50]},{'range':[50,100]}], 'threshold':{'value':50}}
+        gauge={'axis':{'range':[0,100]}, 'bar':{'color':'steelblue'},
+               'steps':[{'range':[0,50],'color':'lightgreen'},{'range':[50,100],'color':'lightcoral'}],
+               'threshold':{'line':{'color':'red','width':4},'value':50}}
     ))
+    fig_gauge.update_layout(margin=dict(t=50,b=0,l=0,r=0))
     st.plotly_chart(fig_gauge, use_container_width=True)
 
-    # navigation buttons
-    if st.button("🔙 Back to Risk Assessment"):
-        st.switch_page("Risk_Assessment")
-    if st.button("📘 Go to Recommendations"):
-        st.switch_page("Recommendations")
+    # Navigation buttons
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("🔙 Back to Risk Assessment"):
+            st.switch_page("pages/Risk_Assessment.py")
+    with c2:
+        if st.button("📘 Go to Recommendations"):
+            st.switch_page("pages/Recommendations.py")
 
 else:
     st.warning("Please complete the Risk Assessment first.")
+
+# ────────────────────────── Footer ─────────────────────────────────────────
+st.markdown("""
+  <style>
+    .custom-footer { background: rgba(76,157,112,0.6); color: white; padding: 30px 0;
+                     border-radius: 12px; margin-top: 40px; text-align: center; font-size: 14px; }
+    .custom-footer a { color: white; text-decoration: none; margin: 0 15px; }
+    .custom-footer a:hover { text-decoration: underline; }
+  </style>
+  <div class='custom-footer'>
+    <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
+    <p>
+      <a href='/Home'>Home</a>
+      <a href='/Risk_Assessment'>Risk Assessment</a>
+      <a href='/Results'>Results</a>
+      <a href='/Recommendations'>Recommendations</a>
+    </p>
+    <p style='font-size:12px; margin-top:10px;'>Developed by Victoria Mends</p>
+  </div>
+""", unsafe_allow_html=True)
 
 
 
