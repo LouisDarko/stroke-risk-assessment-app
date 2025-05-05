@@ -5,6 +5,15 @@ import joblib
 import streamlit as st
 import numpy as np
 
+# ── Define polynomial helper for unpickling ────────────────────────────────────
+def add_poly(X_array):
+    age         = X_array[:, 0]
+    glu         = X_array[:, 1]
+    age_sq      = age ** 2
+    interaction = age * glu
+    glu_sq      = glu ** 2
+    return np.c_[X_array, age_sq, interaction, glu_sq]
+
 # ── Page config & hide defaults ────────────────────────────────────────────────
 st.set_page_config(page_title="Stroke Risk Assessment", layout="wide")
 st.markdown("""
@@ -34,7 +43,7 @@ st.markdown("""
   </div>
 """, unsafe_allow_html=True)
 
-# ── Load full preprocessing+model pipeline ──────────────────────────────────────
+# ── Load the end-to-end pipeline ───────────────────────────────────────────────
 @st.cache_resource
 def load_pipeline():
     base = os.path.dirname(os.path.abspath(__file__))
@@ -97,7 +106,6 @@ st.checkbox("I agree to the terms and allow risk estimation", key="consent")
 
 # ── Calculate & Redirect ────────────────────────────────────────────────────────
 if st.button("Calculate Stroke Risk 📈"):
-    # Validation
     if not st.session_state.consent:
         st.error("You must agree to the terms before proceeding!")
     elif (
@@ -112,12 +120,12 @@ if st.button("Calculate Stroke Risk 📈"):
     ):
         st.error("Please complete all fields with valid values before submitting.")
     else:
-        # ——— Build raw feature vector in the SAME order as training ———
-        gender_map       = {"Male": 0, "Female": 1}
-        married_map      = {"Yes": 1, "No": 0}
-        work_map         = {"Private": 0, "Self-employed": 1, "Govt_job": 2, "Never_worked": 4}
-        smoke_map        = {"never smoked": 0, "formerly smoked": 1, "smokes": 2}
-        
+        # build raw feature array in the SAME order as training
+        gender_map  = {"Male": 0, "Female": 1}
+        married_map = {"Yes": 1, "No": 0}
+        work_map    = {"Private": 0, "Self-employed": 1, "Govt_job": 2, "Never_worked": 4}
+        smoke_map   = {"never smoked": 0, "formerly smoked": 1, "smokes": 2}
+
         raw_list = [
             age,
             avg_glucose_level,
@@ -130,11 +138,11 @@ if st.button("Calculate Stroke Risk 📈"):
         ]
         features = np.array(raw_list).reshape(1, -1)
 
-        # ——— Predict with the entire pipeline ———
+        # predict
         prob = pipeline.predict_proba(features)[0, 1]
 
-        # save for Results page
-        st.session_state.user_data = {
+        # save for Results
+        st.session_state.user_data       = {
             "age": age,
             "avg_glucose_level": avg_glucose_level,
             "heart_disease": heart_disease,
@@ -146,7 +154,7 @@ if st.button("Calculate Stroke Risk 📈"):
         }
         st.session_state.prediction_prob = prob
 
-        # navigate to your Results page
+        # navigate
         st.switch_page("pages/Results.py")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
