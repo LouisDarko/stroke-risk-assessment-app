@@ -20,16 +20,24 @@ SCALER_MEAN  = np.array([47.4572, 106.1478, 0.0482, 0.0513, 0.5527,
 SCALER_SCALE = np.array([15.6753,  26.8145, 0.2141, 0.2206, 0.4974,
                          0.4983,   0.9082,   0.4999, 2978.41, 6144.78, 10795.6])
 
-# ── Load bare model ────────────────────────────────────────────────────────────
+# ── Load bare model for prediction and SHAP ───────────────────────────────────
 @st.cache_resource
-# ignore the model argument for hashing by using a leading underscore
+# cache the model load
+def load_model():
+    base = os.path.dirname(os.path.abspath(__file__))
+    return joblib.load(os.path.join(base, "best_gb_model.pkl"))
+
+model = load_model()
+
+# ── SHAP explainer ─────────────────────────────────────────────────────────────
+@st.cache_resource
+# ignore the model argument for hashing by using leading underscore
 def load_explainer(_model):
     return shap.TreeExplainer(_model)
 
-# pass the trained model into explainer (parameter name starts with underscore, so it's not hashed)
 explainer = load_explainer(model)
 
-# ── Page config & CSS ─────────────────────────────────────────────────────────
+# ── Page config & CSS & CSS ─────────────────────────────────────────────────────────
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
 st.markdown("""
     <style>
@@ -175,6 +183,7 @@ st.markdown("""
       <p style="font-size:12px;">Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
+
 
 
 
