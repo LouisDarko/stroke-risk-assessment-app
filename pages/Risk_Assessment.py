@@ -1,11 +1,9 @@
 import os
-import sys
-import __main__
 import joblib
 import streamlit as st
 import numpy as np
 
-# ── Define polynomial helper for unpickling ─────────────────────────────────
+# ── Polynomial helper ─────────────────────────────────────────────────────────
 def add_poly(X_array):
     age         = X_array[:, 0]
     glu         = X_array[:, 1]
@@ -14,17 +12,13 @@ def add_poly(X_array):
     glu_sq      = glu ** 2
     return np.c_[X_array, age_sq, interaction, glu_sq]
 
-# Monkey-patch into __main__ so pipeline can unpickle
-setattr(__main__, "add_poly", add_poly)
-def add_poly(X_array):
-    age         = X_array[:, 0]
-    glu         = X_array[:, 1]
-    age_sq      = age ** 2
-    interaction = age * glu
-    glu_sq      = glu ** 2
-    return np.c_[X_array, age_sq, interaction, glu_sq]
+# ── Scaler parameters from training ───────────────────────────────────────────
+SCALER_MEAN  = np.array([47.4572, 106.1478,  0.0482, 0.0513, 0.5527,
+                         0.5431,   2.1356,   0.5064, 1850.37, 5067.84, 11645.2])
+SCALER_SCALE = np.array([15.6753,  26.8145,  0.2141, 0.2206, 0.4974,
+                         0.4983,   0.9082,   0.4999, 2978.41, 6144.78, 10795.6])
 
-# ── Page config & hide defaults ────────────────────────────────────────────────
+# ── Page config & CSS ─────────────────────────────────────────────────────────
 st.set_page_config(page_title="Stroke Risk Assessment", layout="wide")
 st.markdown("""
     <style>
@@ -53,134 +47,272 @@ st.markdown("""
   </div>
 """, unsafe_allow_html=True)
 
-# ── Load pipeline (polynomial step defined above) ──────────────────────────────
+# ── Load bare model ────────────────────────────────────────────────────────────
 @st.cache_resource
-def load_pipeline():
+def load_model():
     base = os.path.dirname(os.path.abspath(__file__))
-    return joblib.load(os.path.join(base, "best_gb_pipeline.pkl"))
+    return joblib.load(os.path.join(base, "best_gb_model.pkl"))
 
-pipeline = load_pipeline()
+model = load_model()
 
 # ── Input Sections ─────────────────────────────────────────────────────────────
 with st.expander("👤 Personal Information", expanded=True):
-    age = st.number_input(
-        "Age", min_value=18, max_value=100,
-        value=18, step=1, format="%d", key="age"
-    )
-    gender = st.selectbox(
-        "Gender",
-        ["Select option", "Male", "Female"],
-        index=0, key="gender"
-    )
-    ever_married = st.selectbox(
-        "Ever Married?",
-        ["Select option", "Yes", "No"],
-        index=0, key="ever_married"
-    )
-    work_type = st.selectbox(
-        "Work Type",
-        ["Select option", "Private", "Self-employed", "Govt_job", "Never_worked"],
-        index=0, key="work_type"
-    )
+    age = st.number_input("Age", 18, 100, value=18, step=1, key="age")
+    gender = st.selectbox("Gender", ["Select option", "Male", "Female"], key="gender")
+    ever_married = st.selectbox("Ever Married?", ["Select option", "Yes", "No"], key="ever_married")
+    work_type = st.selectbox("Work Type", ["Select option", "Private", "Self-employed", "Govt_job", "Never_worked"], key="work_type")
 
 with st.expander("🩺 Health Information", expanded=True):
-    hypertension = st.radio(
-        "Do you have hypertension?",
-        ["Select option", "Yes", "No"],
-        index=0, key="hypertension"
-    )
-    heart_disease = st.radio(
-        "Do you have heart disease?",
-        ["Select option", "Yes", "No"],
-        index=0, key="heart_disease"
-    )
-    avg_glucose_level = st.number_input(
-        "Average Glucose Level (mg/dL)",
-        min_value=55.0, value=55.0, step=0.1,
-        key="avg_glucose_level"
-    )
-    smoking_status = st.selectbox(
-        "Smoking Status",
-        ["Select option", "never smoked", "formerly smoked", "smokes"],
-        index=0, key="smoking_status"
-    )
+    hypertension = st.radio("Do you have hypertension?", ["Select option", "Yes", "No"], key="hypertension")
+    heart_disease = st.radio("Do you have heart disease?", ["Select option", "Yes", "No"], key="heart_disease")
+    avg_glucose_level = st.number_input("Average Glucose Level (mg/dL)", 55.0, 300.0, value=55.0, step=0.1, key="avg_glucose_level")
+    smoking_status = st.selectbox("Smoking Status", ["Select option", "never smoked", "formerly smoked", "smokes"], key="smoking_status")
 
-# ── Consent & Disclaimer ───────────────────────────────────────────────────────
+# ── Consent ────────────────────────────────────────────────────────────────────
 st.markdown("### 📄 Consent and Disclaimer")
-st.write(
-    "This tool provides an estimate of stroke risk based on the information you provide. "
-    "It is not a diagnostic tool and should not replace professional medical advice. "
-    "By submitting, you agree to allow us to estimate your stroke risk."
-)
+st.write("This tool provides an estimate of stroke risk. Not a diagnostic. Consult a professional.")
 st.checkbox("I agree to the terms and allow risk estimation", key="consent")
 
 # ── Calculate & Redirect ────────────────────────────────────────────────────────
 if st.button("Calculate Stroke Risk 📈"):
     if not st.session_state.consent:
-        st.error("You must agree to the terms before proceeding!")
-    elif (
-        gender == "Select option"
-        or ever_married == "Select option"
-        or work_type == "Select option"
-        or hypertension == "Select option"
-        or heart_disease == "Select option"
-        or smoking_status == "Select option"
-        or age < 18
-        or avg_glucose_level <= 0
-    ):
-        st.error("Please complete all fields with valid values before submitting.")
+        st.error("You must agree before proceeding!")
+    elif any(val == "Select option" for val in [gender, ever_married, work_type, hypertension, heart_disease, smoking_status]):
+        st.error("Please complete all fields.")
     else:
-        # Build raw feature array in same order as training
+        # raw features order
         raw = [
             age,
             avg_glucose_level,
-            {"Yes":1,"No":0}[heart_disease],
-            {"Yes":1,"No":0}[hypertension],
-            {"Yes":1,"No":0}[ever_married],
-            {"never smoked":0,"formerly smoked":1,"smokes":2}[smoking_status],
-            {"Private":0,"Self-employed":1,"Govt_job":2,"Never_worked":4}[work_type],
-            {"Male":0,"Female":1}[gender]
+            1 if heart_disease == "Yes" else 0,
+            1 if hypertension   == "Yes" else 0,
+            1 if ever_married    == "Yes" else 0,
+            {"never smoked":0, "formerly smoked":1, "smokes":2}[smoking_status],
+            {"Private":0, "Self-employed":1, "Govt_job":2, "Never_worked":4}[work_type],
+            0 if gender == "Male" else 1
         ]
-        features = np.array(raw).reshape(1, -1)
+        X_raw = np.array(raw).reshape(1, -1)
+        X_poly = add_poly(X_raw)
+        X_scaled = (X_poly - SCALER_MEAN) / SCALER_SCALE
+        prob = model.predict_proba(X_scaled)[0, 1]
 
-        prob = pipeline.predict_proba(features)[0, 1]
-
-        st.session_state.user_data = {
-            "age": age,
-            "avg_glucose_level": avg_glucose_level,
-            "heart_disease": heart_disease,
-            "hypertension": hypertension,
-            "ever_married": ever_married,
-            "smoking_status": smoking_status,
-            "work_type": work_type,
-            "gender": gender
-        }
+        st.session_state.user_data       = {k: v for k, v in zip(["age","avg_glucose_level","heart_disease","hypertension","ever_married","smoking_status","work_type","gender"], raw)}
         st.session_state.prediction_prob = prob
-
         st.switch_page("pages/Results.py")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
   <style>
-    .custom-footer {
-      background-color: rgba(76,157,112,0.6); color: white;
-      padding: 30px 0; border-radius: 12px; margin-top: 40px;
-      text-align: center; font-size: 14px; width: 100%;
-    }
+    .custom-footer { background-color: rgba(76,157,112,0.6); color: white; padding: 30px 0; border-radius: 12px; margin-top: 40px; text-align: center; font-size: 14px; width: 100%; }
     .custom-footer a { color: white; text-decoration: none; margin: 0 15px; }
     .custom-footer a:hover { text-decoration: underline; }
   </style>
   <div class="custom-footer">
       <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
-      <p>
-        <a href='/Home'>Home</a>
-        <a href='/Risk_Assessment'>Risk Assessment</a>
-        <a href='/Results'>Results</a>
-        <a href='/Recommendations'>Recommendations</a>
-      </p>
+      <p><a href='/Home'>Home</a> <a href='/Risk_Assessment'>Risk Assessment</a> <a href='/Results'>Results</a> <a href='/Recommendations'>Recommendations</a></p>
       <p style="font-size:12px;">Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# import os
+# import sys
+# import __main__
+# import joblib
+# import streamlit as st
+# import numpy as np
+
+# # ── Define polynomial helper for unpickling ─────────────────────────────────
+# def add_poly(X_array):
+#     age         = X_array[:, 0]
+#     glu         = X_array[:, 1]
+#     age_sq      = age ** 2
+#     interaction = age * glu
+#     glu_sq      = glu ** 2
+#     return np.c_[X_array, age_sq, interaction, glu_sq]
+
+# # Monkey-patch into __main__ so pipeline can unpickle
+# setattr(__main__, "add_poly", add_poly)
+# def add_poly(X_array):
+#     age         = X_array[:, 0]
+#     glu         = X_array[:, 1]
+#     age_sq      = age ** 2
+#     interaction = age * glu
+#     glu_sq      = glu ** 2
+#     return np.c_[X_array, age_sq, interaction, glu_sq]
+
+# # ── Page config & hide defaults ────────────────────────────────────────────────
+# st.set_page_config(page_title="Stroke Risk Assessment", layout="wide")
+# st.markdown("""
+#     <style>
+#       #MainMenu, footer, header {visibility: hidden;}
+#       [data-testid="stSidebar"], [data-testid="collapsedControl"] {display: none;}
+#     </style>
+# """, unsafe_allow_html=True)
+
+# # ── Title & Navbar ─────────────────────────────────────────────────────────────
+# st.title("📝 Stroke Risk Assessment")
+# st.markdown("""
+#   <style>
+#     .custom-nav {
+#       background: #e8f5e9; padding: 15px 0; border-radius: 10px;
+#       display: flex; justify-content: center; gap: 60px; margin-bottom: 30px;
+#       font-size: 18px; font-weight: 600;
+#     }
+#     .custom-nav a { text-decoration: none; color: #4C9D70; }
+#     .custom-nav a:hover { color: #388e3c; text-decoration: underline; }
+#   </style>
+#   <div class="custom-nav">
+#     <a href='/Home'>Home</a>
+#     <a href='/Risk_Assessment'>Risk Assessment</a>
+#     <a href='/Results'>Results</a>
+#     <a href='/Recommendations'>Recommendations</a>
+#   </div>
+# """, unsafe_allow_html=True)
+
+# # ── Load pipeline (polynomial step defined above) ──────────────────────────────
+# @st.cache_resource
+# def load_pipeline():
+#     base = os.path.dirname(os.path.abspath(__file__))
+#     return joblib.load(os.path.join(base, "best_gb_pipeline.pkl"))
+
+# pipeline = load_pipeline()
+
+# # ── Input Sections ─────────────────────────────────────────────────────────────
+# with st.expander("👤 Personal Information", expanded=True):
+#     age = st.number_input(
+#         "Age", min_value=18, max_value=100,
+#         value=18, step=1, format="%d", key="age"
+#     )
+#     gender = st.selectbox(
+#         "Gender",
+#         ["Select option", "Male", "Female"],
+#         index=0, key="gender"
+#     )
+#     ever_married = st.selectbox(
+#         "Ever Married?",
+#         ["Select option", "Yes", "No"],
+#         index=0, key="ever_married"
+#     )
+#     work_type = st.selectbox(
+#         "Work Type",
+#         ["Select option", "Private", "Self-employed", "Govt_job", "Never_worked"],
+#         index=0, key="work_type"
+#     )
+
+# with st.expander("🩺 Health Information", expanded=True):
+#     hypertension = st.radio(
+#         "Do you have hypertension?",
+#         ["Select option", "Yes", "No"],
+#         index=0, key="hypertension"
+#     )
+#     heart_disease = st.radio(
+#         "Do you have heart disease?",
+#         ["Select option", "Yes", "No"],
+#         index=0, key="heart_disease"
+#     )
+#     avg_glucose_level = st.number_input(
+#         "Average Glucose Level (mg/dL)",
+#         min_value=55.0, value=55.0, step=0.1,
+#         key="avg_glucose_level"
+#     )
+#     smoking_status = st.selectbox(
+#         "Smoking Status",
+#         ["Select option", "never smoked", "formerly smoked", "smokes"],
+#         index=0, key="smoking_status"
+#     )
+
+# # ── Consent & Disclaimer ───────────────────────────────────────────────────────
+# st.markdown("### 📄 Consent and Disclaimer")
+# st.write(
+#     "This tool provides an estimate of stroke risk based on the information you provide. "
+#     "It is not a diagnostic tool and should not replace professional medical advice. "
+#     "By submitting, you agree to allow us to estimate your stroke risk."
+# )
+# st.checkbox("I agree to the terms and allow risk estimation", key="consent")
+
+# # ── Calculate & Redirect ────────────────────────────────────────────────────────
+# if st.button("Calculate Stroke Risk 📈"):
+#     if not st.session_state.consent:
+#         st.error("You must agree to the terms before proceeding!")
+#     elif (
+#         gender == "Select option"
+#         or ever_married == "Select option"
+#         or work_type == "Select option"
+#         or hypertension == "Select option"
+#         or heart_disease == "Select option"
+#         or smoking_status == "Select option"
+#         or age < 18
+#         or avg_glucose_level <= 0
+#     ):
+#         st.error("Please complete all fields with valid values before submitting.")
+#     else:
+#         # Build raw feature array in same order as training
+#         raw = [
+#             age,
+#             avg_glucose_level,
+#             {"Yes":1,"No":0}[heart_disease],
+#             {"Yes":1,"No":0}[hypertension],
+#             {"Yes":1,"No":0}[ever_married],
+#             {"never smoked":0,"formerly smoked":1,"smokes":2}[smoking_status],
+#             {"Private":0,"Self-employed":1,"Govt_job":2,"Never_worked":4}[work_type],
+#             {"Male":0,"Female":1}[gender]
+#         ]
+#         features = np.array(raw).reshape(1, -1)
+
+#         prob = pipeline.predict_proba(features)[0, 1]
+
+#         st.session_state.user_data = {
+#             "age": age,
+#             "avg_glucose_level": avg_glucose_level,
+#             "heart_disease": heart_disease,
+#             "hypertension": hypertension,
+#             "ever_married": ever_married,
+#             "smoking_status": smoking_status,
+#             "work_type": work_type,
+#             "gender": gender
+#         }
+#         st.session_state.prediction_prob = prob
+
+#         st.switch_page("pages/Results.py")
+
+# # ── Footer ────────────────────────────────────────────────────────────────────
+# st.markdown("""
+#   <style>
+#     .custom-footer {
+#       background-color: rgba(76,157,112,0.6); color: white;
+#       padding: 30px 0; border-radius: 12px; margin-top: 40px;
+#       text-align: center; font-size: 14px; width: 100%;
+#     }
+#     .custom-footer a { color: white; text-decoration: none; margin: 0 15px; }
+#     .custom-footer a:hover { text-decoration: underline; }
+#   </style>
+#   <div class="custom-footer">
+#       <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
+#       <p>
+#         <a href='/Home'>Home</a>
+#         <a href='/Risk_Assessment'>Risk Assessment</a>
+#         <a href='/Results'>Results</a>
+#         <a href='/Recommendations'>Recommendations</a>
+#       </p>
+#       <p style="font-size:12px;">Developed by Victoria Mends</p>
+#   </div>
+# """, unsafe_allow_html=True)
 
 
 
