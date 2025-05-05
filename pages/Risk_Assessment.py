@@ -1,7 +1,7 @@
 import streamlit as st
- import joblib
- import os
- import numpy as np
+import joblib
+import os
+import numpy as np
  
  # ── Page config & hide defaults ────────────────────────────────────────────────
  st.set_page_config(page_title="Stroke Risk Assessment", layout="wide")
