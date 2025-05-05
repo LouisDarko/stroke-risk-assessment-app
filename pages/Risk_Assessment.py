@@ -17,15 +17,9 @@ st.title("📝 Stroke Risk Assessment")
 st.markdown("""
   <style>
     .custom-nav {
-      background: #e8f5e9;
-      padding: 15px 0;
-      border-radius: 10px;
-      display: flex;
-      justify-content: center;
-      gap: 60px;
-      margin-bottom: 30px;
-      font-size: 18px;
-      font-weight: 600;
+      background: #e8f5e9; padding: 15px 0; border-radius: 10px;
+      display: flex; justify-content: center; gap: 60px; margin-bottom: 30px;
+      font-size: 18px; font-weight: 600;
     }
     .custom-nav a { text-decoration: none; color: #4C9D70; }
     .custom-nav a:hover { color: #388e3c; text-decoration: underline; }
@@ -50,20 +44,24 @@ scaler, model = load_artifacts()
 
 # ── Input Sections ─────────────────────────────────────────────────────────────
 with st.expander("👤 Personal Information", expanded=True):
-    age = st.number_input("Age", min_value=18, max_value=100, value=18, step=1, format="%d", key="age")
-    gender = st.selectbox("Gender", ["Select option", "Male", "Female"], index=0, key="gender")
-    ever_married = st.selectbox("Ever Married?", ["Select option", "Yes", "No"], index=0, key="ever_married")
+    age = st.number_input("Age", 18, 100, 18, key="age")
+    gender = st.selectbox("Gender", ["Select option", "Male", "Female"], key="gender")
+    ever_married = st.selectbox("Ever Married?", ["Select option", "Yes", "No"], key="ever_married")
     work_type = st.selectbox(
         "Work Type",
         ["Select option", "Private", "Self-employed", "Govt_job", "Never_worked"],
-        index=0, key="work_type"
+        key="work_type"
     )
 
 with st.expander("🩺 Health Information", expanded=True):
-    hypertension = st.radio("Do you have hypertension?", ["Select option", "Yes", "No"], index=0, key="hypertension")
-    heart_disease = st.radio("Do you have heart disease?", ["Select option", "Yes", "No"], index=0, key="heart_disease")
-    avg_glucose_level = st.number_input("Average Glucose Level (mg/dL)", min_value=0.0, value=55.0, step=0.1, key="avg_glucose_level")
-    smoking_status = st.selectbox("Smoking Status", ["Select option", "never smoked", "formerly smoked", "smokes"], index=0, key="smoking_status")
+    hypertension = st.radio("Do you have hypertension?", ["Select option", "Yes", "No"], key="hypertension")
+    heart_disease = st.radio("Do you have heart disease?", ["Select option", "Yes", "No"], key="heart_disease")
+    avg_glucose_level = st.number_input(
+        "Average Glucose Level (mg/dL)", 0.0, 500.0, 55.0, step=0.1, key="avg_glucose_level"
+    )
+    smoking_status = st.selectbox(
+        "Smoking Status", ["Select option", "never smoked", "formerly smoked", "smokes"], key="smoking_status"
+    )
 
 # ── Consent & Disclaimer ───────────────────────────────────────────────────────
 st.markdown("### 📄 Consent and Disclaimer")
@@ -90,7 +88,6 @@ if st.button("Calculate Stroke Risk 📈"):
     ):
         st.error("Please complete all fields with valid values before submitting.")
     else:
-        # compute polynomial features
         age_val     = st.session_state.age
         glu_val     = st.session_state.avg_glucose_level
         age_sq      = age_val ** 2
@@ -128,7 +125,7 @@ if st.button("Calculate Stroke Risk 📈"):
         prob = model.predict_proba(features)[0][1]
         st.session_state.prediction_prob = prob
 
-        # navigate to Results page via relative path
+        # navigate to Results page via file path
         st.switch_page("pages/Results.py")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
