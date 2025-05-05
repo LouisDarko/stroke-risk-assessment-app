@@ -7,37 +7,49 @@ import plotly.graph_objects as go
 
 # ── Polynomial feature helper ─────────────────────────────────────────────────
 def add_poly(X):
-    age       = X[:, 0]
-    glu       = X[:, 1]
-    age_sq    = age ** 2
-    inter     = age * glu
-    glu_sq    = glu ** 2
+    # X shape: (n_samples, 8) raw features
+    age    = X[:, 0]
+    glu    = X[:, 1]
+    age_sq = age ** 2
+    inter  = age * glu
+    glu_sq = glu ** 2
     return np.c_[X, age_sq, inter, glu_sq]
 
 # ── Scaler parameters from training ────────────────────────────────────────────
-SCALER_MEAN  = np.array([47.4572, 106.1478, 0.0482, 0.0513, 0.5527,
-                         0.5431,   2.1356,   0.5064, 1850.37, 5067.84, 11645.2])
-SCALER_SCALE = np.array([15.6753,  26.8145, 0.2141, 0.2206, 0.4974,
-                         0.4983,   0.9082,   0.4999, 2978.41, 6144.78, 10795.6])
+SCALER_MEAN = np.array([
+    47.4572, 106.1478,  # age, glucose
+    0.0482, 0.0513,     # heart_disease, hypertension
+    0.5527, 0.5431,     # ever_married, smoking_status
+    2.1356, 0.5064,     # work_type, gender
+    1850.37, 5067.84, 11645.2  # age_sq, inter, glu_sq
+])
+SCALER_SCALE = np.array([
+    15.6753, 26.8145,
+    0.2141, 0.2206,
+    0.4974, 0.4983,
+    0.9082, 0.4999,
+    2978.41, 6144.78, 10795.6
+])
 
 # ── Load bare model for prediction and SHAP ───────────────────────────────────
 @st.cache_resource
-# cache the model load
+# Cache the model loading; no hashing of large objects
 def load_model():
     base = os.path.dirname(os.path.abspath(__file__))
-    return joblib.load(os.path.join(base, "best_gb_model.pkl"))
+    path = os.path.join(base, "best_gb_model.pkl")
+    return joblib.load(path)
 
 model = load_model()
 
 # ── SHAP explainer ─────────────────────────────────────────────────────────────
 @st.cache_resource
-# ignore the model argument for hashing by using leading underscore
+# Use underscore to prevent hashing the model object
 def load_explainer(_model):
     return shap.TreeExplainer(_model)
 
 explainer = load_explainer(model)
 
-# ── Page config & CSS & CSS ─────────────────────────────────────────────────────────
+# ── Page config & CSS ─────────────────────────────────────────────────────────
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
 st.markdown("""
     <style>
@@ -86,6 +98,7 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     st.write("---")
 
     UD = st.session_state.user_data
+    # Rebuild raw feature vector in training order
     raw = [
         UD["age"],
         UD["avg_glucose_level"],
@@ -93,14 +106,15 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
         1 if UD["hypertension"] == "Yes" else 0,
         1 if UD["ever_married"] == "Yes" else 0,
         {"never smoked":0, "formerly smoked":1, "smokes":2}[UD["smoking_status"]],
-        {"Private":0, "Self-employed":1, "Govt_job":2, "Never_worked":3}[UD["work_type"]],
+        {"Private":0, "Self-employed":1, "Govt_job":2, "Never_worked":4}[UD["work_type"]],
         {"Male":0, "Female":1}[UD["gender"]]
     ]
     X_raw    = np.array(raw).reshape(1, -1)
     X_poly   = add_poly(X_raw)
     X_scaled = (X_poly - SCALER_MEAN) / SCALER_SCALE
 
-    sv = explainer.shap_values(X_scaled)
+    # SHAP values
+    sv        = explainer.shap_values(X_scaled)
     shap_vals = sv[1][0] if isinstance(sv, list) else sv[0]
     vals      = np.abs(shap_vals[:8])
     contrib   = vals / vals.sum() * prob
@@ -112,30 +126,27 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     palette = ["brown","gold","steelblue","purple"]
     colors  = [palette[i % len(palette)] for i in range(len(feature_names))]
 
+    # Contribution bar chart
     bar_fig = go.Figure(
-        go.Bar(
-            x=feature_names,
-            y=contrib * 100,
-            marker=dict(color=colors),
-            text=[f"{v*100:.2f}%" for v in contrib],
-            textposition="outside"
-        )
+        go.Bar(x=feature_names,
+               y=contrib * 100,
+               marker=dict(color=colors),
+               text=[f"{v*100:.2f}%" for v in contrib],
+               textposition="outside")
     )
     bar_fig.update_layout(
         template="plotly_white",
         title="How Each Input Contributed to Your Total Risk",
         yaxis=dict(title="Contribution to Risk (%)", range=[0,100], ticksuffix="%"),
         xaxis=dict(tickangle=-45),
-        margin=dict(t=60, b=120),
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)"
+        margin=dict(t=60, b=120)
     )
     st.plotly_chart(bar_fig, use_container_width=True)
 
+    # Gauge chart
     r = int(255 * prob)
     g = int(255 * (1 - prob))
     bar_color = f"rgb({r},{g},0)"
-
     gauge_fig = go.Figure(
         go.Indicator(
             mode="gauge+number",
@@ -145,21 +156,14 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
             gauge={
                 'axis': {'range': [0,100], 'ticksuffix': '%'},
                 'bar': {'color': bar_color},
-                'steps': [
-                    {'range': [0,50],  'color': 'green'},
-                    {'range': [50,100],'color': 'red'}
-                ]
+                'steps': [{'range': [0,50], 'color': 'green'}, {'range': [50,100], 'color': 'red'}]
             }
         )
     )
-    gauge_fig.update_layout(
-        template="plotly_white",
-        margin=dict(t=40, b=0, l=0, r=0),
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)"
-    )
+    gauge_fig.update_layout(template="plotly_white", margin=dict(t=40, b=0, l=0, r=0))
     st.plotly_chart(gauge_fig, use_container_width=True)
 
+    # Navigation buttons
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🔙 Back to Assessment"):
@@ -167,10 +171,10 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     with col2:
         if st.button("📘 Recommendations"):
             st.switch_page("pages/Recommendations.py")
-
 else:
     st.warning("No input data found. Please complete the Risk Assessment first.")
 
+# ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
   <style>
     .custom-footer { background-color: rgba(76,157,112,0.6); color: white; padding: 30px 0; border-radius: 12px; margin-top: 40px; text-align: center; font-size: 14px; width: 100%; }
