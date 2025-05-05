@@ -1,11 +1,9 @@
-# pages/Risk_Assessment.py
-
 import os
 import joblib
 import streamlit as st
 import numpy as np
 
-# ── Define polynomial helper for unpickling ────────────────────────────────────
+# ── Define polynomial helper for unpickling ─────────────────────────────────
 def add_poly(X_array):
     age         = X_array[:, 0]
     glu         = X_array[:, 1]
@@ -43,7 +41,7 @@ st.markdown("""
   </div>
 """, unsafe_allow_html=True)
 
-# ── Load the end-to-end pipeline ───────────────────────────────────────────────
+# ── Load pipeline (polynomial step defined above) ──────────────────────────────
 @st.cache_resource
 def load_pipeline():
     base = os.path.dirname(os.path.abspath(__file__))
@@ -120,29 +118,22 @@ if st.button("Calculate Stroke Risk 📈"):
     ):
         st.error("Please complete all fields with valid values before submitting.")
     else:
-        # build raw feature array in the SAME order as training
-        gender_map  = {"Male": 0, "Female": 1}
-        married_map = {"Yes": 1, "No": 0}
-        work_map    = {"Private": 0, "Self-employed": 1, "Govt_job": 2, "Never_worked": 4}
-        smoke_map   = {"never smoked": 0, "formerly smoked": 1, "smokes": 2}
-
-        raw_list = [
+        # Build raw feature array in same order as training
+        raw = [
             age,
             avg_glucose_level,
             {"Yes":1,"No":0}[heart_disease],
             {"Yes":1,"No":0}[hypertension],
-            married_map[ever_married],
-            smoke_map[smoking_status],
-            work_map[work_type],
-            gender_map[gender]
+            {"Yes":1,"No":0}[ever_married],
+            {"never smoked":0,"formerly smoked":1,"smokes":2}[smoking_status],
+            {"Private":0,"Self-employed":1,"Govt_job":2,"Never_worked":4}[work_type],
+            {"Male":0,"Female":1}[gender]
         ]
-        features = np.array(raw_list).reshape(1, -1)
+        features = np.array(raw).reshape(1, -1)
 
-        # predict
         prob = pipeline.predict_proba(features)[0, 1]
 
-        # save for Results
-        st.session_state.user_data       = {
+        st.session_state.user_data = {
             "age": age,
             "avg_glucose_level": avg_glucose_level,
             "heart_disease": heart_disease,
@@ -154,7 +145,6 @@ if st.button("Calculate Stroke Risk 📈"):
         }
         st.session_state.prediction_prob = prob
 
-        # navigate
         st.switch_page("pages/Results.py")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
