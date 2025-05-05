@@ -48,8 +48,9 @@ model = load_model()
 
 # ── Compute SHAP explainer once ────────────────────────────────────────────────
 @st.cache_resource
-def get_explainer(mdl):
-    return shap.TreeExplainer(mdl)
+def get_explainer(_model):
+    # Leading underscore tells Streamlit not to hash this parameter
+    return shap.TreeExplainer(_model)
 
 explainer = get_explainer(model)
 
@@ -84,10 +85,8 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     ]])
 
     sv = explainer.shap_values(full_X)
-    # shap_values returns a list for binary classifiers
     shap_vals_full = sv[1][0] if isinstance(sv, list) else sv[0]
 
-    # Only take first 8 features for display
     raw8 = shap_vals_full[:8]
     abs8 = np.abs(raw8)
     contrib = abs8 / abs8.sum() * prob
@@ -98,7 +97,6 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
         "Age", "Avg Glucose"
     ]
 
-    # Highlight the biggest contributor
     default_colors = [
         "#636EFA", "#00CC96", "#AB63FA", "#FFA15A",
         "#19D3F3", "#FF6692", "#B6E880", "#FF97FF"
@@ -109,7 +107,6 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
         for i in range(len(feature_names))
     ]
 
-    # Plotly bar chart
     fig = go.Figure(
         go.Bar(
             x=feature_names,
@@ -167,6 +164,7 @@ st.markdown("""
     <p style="font-size:12px; margin-top:10px;">Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
+
 
 
 
