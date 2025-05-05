@@ -186,23 +186,23 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
 else:
     st.warning("No input data found. Please complete the Risk Assessment first.")
 
-# ── Footer ────────────────────────────────────────────────────────────────────
+# Footer
 st.markdown("""
   <style>
-    .custom-footer {
-      background-color: rgba(76,157,112,0.6); color: white; padding: 20px; border-radius: 8px; margin-top: 40px; text-align: center; font-size: 14px;
-    }
-    .custom-footer a { color: white; text-decoration: none; margin: 0 10px; }
+    .custom-footer { background: rgba(76,157,112,0.6); color: white; padding: 30px 0;
+                     border-radius: 12px; margin-top: 40px; text-align: center; font-size: 14px; }
+    .custom-footer a { color: white; text-decoration: none; margin: 0 15px; }
     .custom-footer a:hover { text-decoration: underline; }
   </style>
-  <div class="custom-footer">
-    <p>&copy; 2025 Stroke Risk Assessment Tool | Developed by Victoria Mends</p>
+  <div class='custom-footer'>
+    <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
     <p>
-      <a href='/Home'>Home</a> •
-      <a href='/Risk_Assessment'>Assessment</a> •
-      <a href='/Results'>Results</a> •
+      <a href='/Home'>Home</a>
+      <a href='/Risk_Assessment'>Risk Assessment</a>
+      <a href='/Results'>Results</a>
       <a href='/Recommendations'>Recommendations</a>
     </p>
+    <p style='font-size:12px; margin-top:10px;'>Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
 
