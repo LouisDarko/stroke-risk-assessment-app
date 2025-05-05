@@ -6,7 +6,7 @@ import shap
 import plotly.graph_objects as go
 
 # ── Page config must be first ─────────────────────────────────────────────────
-st.set_page_config(page_title="Stroke Risk Results", layout="wide")
+
 
 
 # ── Polynomial feature helper ─────────────────────────────────────────────────
@@ -191,8 +191,6 @@ st.markdown("""
       <p style="font-size:12px;">Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
-
-
 
 
 
