@@ -43,13 +43,7 @@ st.markdown("""
     }
     .custom-nav a { text-decoration: none; color: #4C9D70; }
     .custom-nav a:hover { color: #388e3c; text-decoration: underline; }
-  </style>
-  <div class="custom-nav">
-    <a href='/Home'>Home</a>
-    <a href='/Risk_Assessment'>Risk Assessment</a>
-    <a href='/Results'>Results</a>
-    <a href='/Recommendations'>Recommendations</a>
-  </div>
+
 """, unsafe_allow_html=True)
 
 # ── Load model ─────────────────────────────────────────────────────────────────
