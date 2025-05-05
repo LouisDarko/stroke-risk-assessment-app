@@ -394,11 +394,19 @@ st.markdown("""
 
 # ── Load model ─────────────────────────────────────────────────────────────────
 @st.cache_resource
-def load_model():
-    base = os.path.dirname(os.path.abspath(__file__))
-    return joblib.load(os.path.join(base, "best_gb_model.pkl"))
+# def load_model():
+#     base = os.path.dirname(os.path.abspath(__file__))
+#     return joblib.load(os.path.join(base, "best_gb_model.pkl"))
 
-model = load_model()
+# model = load_model()
+
+def load_artifacts():
+    base = os.path.dirname(os.path.abspath(__file__))
+    scaler = joblib.load(os.path.join(base, "scaler.pkl"))
+    model  = joblib.load(os.path.join(base, "best_gb_model.pkl"))
+    return scaler, model
+
+scaler, model = load_artifacts()
 
 # ── Input Sections ─────────────────────────────────────────────────────────────
 with st.expander("👤 Personal Information", expanded=True):
