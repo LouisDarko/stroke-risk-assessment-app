@@ -118,12 +118,12 @@ if st.button("Calculate Stroke Risk 📈"):
         interaction = age_val * glu_val
 
         # encoding maps
-        gender_map = {"Male": 0, "Female": 1}
+        gender_map = {"Male": 1, "Female": 0}
         married_map = {"Yes": 1, "No": 0}
-        work_map = {"Private": 0, "Self-employed": 1, "Govt_job": 2, "Never_worked": 3}
+        work_map = {"Private": 2, "Self-employed": 3, "Govt_job": 0, "Never_worked": 1}
         htn_map = {"Yes": 1, "No": 0}
         heart_map = {"Yes": 1, "No": 0}
-        smoke_map = {"never smoked": 0, "formerly smoked": 1, "smokes": 2}
+        smoke_map = {"never smoked": 1, "formerly smoked": 0, "smokes": 2}
 
         # build feature vector in the same order as training
         features = np.array([[
