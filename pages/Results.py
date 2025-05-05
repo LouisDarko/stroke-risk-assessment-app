@@ -49,7 +49,6 @@ model = load_model()
 # ── Compute SHAP explainer once ────────────────────────────────────────────────
 @st.cache_resource
 def get_explainer(_model):
-    # Leading underscore tells Streamlit not to hash this parameter
     return shap.TreeExplainer(_model)
 
 explainer = get_explainer(model)
@@ -97,16 +96,11 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
         "Age", "Avg Glucose"
     ]
 
-    default_colors = [
-        "#636EFA", "#00CC96", "#AB63FA", "#FFA15A",
-        "#19D3F3", "#FF6692", "#B6E880", "#FF97FF"
-    ]
-    top_idx = int(np.argmax(contrib))
-    colors = [
-        "red" if i == top_idx else default_colors[i % len(default_colors)]
-        for i in range(len(feature_names))
-    ]
+    # Cycle through the four requested colors
+    palette = ["brown", "gold", "steelblue", "purple"]
+    colors = [palette[i % len(palette)] for i in range(len(feature_names))]
 
+    # Bar chart of contributions
     fig = go.Figure(
         go.Bar(
             x=feature_names,
@@ -124,6 +118,25 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
         margin=dict(t=60, b=120)
     )
     st.plotly_chart(fig, use_container_width=True)
+
+    # ── New Gauge Visualization ────────────────────────────────────────────────
+    gauge_fig = go.Figure(
+        go.Indicator(
+            mode="gauge+number",
+            value=prob * 100,
+            title={'text': "Overall Stroke Risk (%)"},
+            gauge={
+                'axis': {'range': [0, 100]},
+                'bar': {'color': "purple"},
+                'steps': [
+                    {'range': [0, 50], 'color': "lightgray"},
+                    {'range': [50, 100], 'color': "gray"}
+                ]
+            }
+        )
+    )
+    gauge_fig.update_layout(margin=dict(t=40, b=0, l=0, r=0))
+    st.plotly_chart(gauge_fig, use_container_width=True)
 
     # Navigation Buttons
     col1, col2 = st.columns(2)
@@ -164,6 +177,7 @@ st.markdown("""
     <p style="font-size:12px; margin-top:10px;">Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
+
 
 
 
