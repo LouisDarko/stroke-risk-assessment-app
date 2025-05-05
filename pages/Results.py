@@ -105,9 +105,9 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
       {"Yes":1,"No":0}[UD["heart_disease"]],
       {"Yes":1,"No":0}[UD["hypertension"]],
       {"Yes":1,"No":0}[UD["ever_married"]],
-      {"never smoked":0,"formerly smoked":1,"smokes":2}[UD["smoking_status"]],
-      {"Private":0,"Self-employed":1,"Govt_job":2,"Never_worked":3}[UD["work_type"]],
-      {"Male":0,"Female":1}[UD["gender"]],
+      {"never smoked":1,"formerly smoked":0,"smokes":2}[UD["smoking_status"]],
+      {"Private":2,"Self-employed":3,"Govt_job":0,"Never_worked":1}[UD["work_type"]],
+      {"Male":1,"Female":0}[UD["gender"]],
       age, glu, age_sq, interaction, glu_sq
     ]])
 
