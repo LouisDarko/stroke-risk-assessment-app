@@ -157,11 +157,19 @@ st.markdown("""
 
 # ── Load model ─────────────────────────────────────────────────────────────────
 @st.cache_resource
-def load_model():
-    base = os.path.dirname(os.path.abspath(__file__))
-    return joblib.load(os.path.join(base, "best_stacking_model.pkl"))
+# def load_model():
+#     base = os.path.dirname(os.path.abspath(__file__))
+#     return joblib.load(os.path.join(base, "best_gb_model.pkl"))
 
-model = load_model()
+# model = load_model()
+
+def load_artifacts():
+    base = os.path.dirname(os.path.abspath(__file__))
+    scaler = joblib.load(os.path.join(base, "scaler.pkl"))
+    model  = joblib.load(os.path.join(base, "best_gb_model.pkl"))
+    return scaler, model
+
+scaler, model = load_artifacts()
 
 # ── Input Sections ─────────────────────────────────────────────────────────────
 with st.expander("👤 Personal Information", expanded=True):
@@ -222,10 +230,50 @@ if st.button("Calculate Stroke Risk 📈"):
     ):
         st.error("Please complete all fields with valid values before submitting.")
     else:
-        # Compute polynomial terms
-        age_sq       = age ** 2
-        glucose_sq   = avg_glucose_level ** 2
-        interaction  = age * avg_glucose_level
+        # # Compute polynomial terms
+        # age_sq       = age ** 2
+        # glucose_sq   = avg_glucose_level ** 2
+        # interaction  = age * avg_glucose_level
+
+        # # Encoding maps (exactly as in training)
+        # gender_map  = {"Male": 0, "Female": 1}
+        # married_map = {"Yes": 1, "No": 0}
+        # work_map    = {
+        #     "Private": 0,
+        #     "Self-employed": 1,
+        #     "Govt_job": 2,
+        #     "Never_worked": 3
+        # }
+        # htn_map     = {"Yes": 1, "No": 0}
+        # heart_map   = {"Yes": 1, "No": 0}
+        # smoke_map   = {
+        #     "never smoked": 0,
+        #     "formerly smoked": 1,
+        #     "smokes": 2
+        # }
+
+        # # Build feature vector in the same order you trained on
+        # features = np.array([[
+        #     heart_map[heart_disease],                # heart_disease
+        #     htn_map[hypertension],                   # hypertension
+        #     married_map[ever_married],               # married_map[ever_married]
+        #     smoke_map[smoking_status],               # smoking_map[smoking_status]
+        #     work_map[work_type],                     # work_type_map[work_type]
+        #     gender_map[gender],                      # gender_map[gender]
+        #     age,                                     # age
+        #     avg_glucose_level,                       # avg_glucose_level
+        #     age_sq,                                  # age_squared
+        #     interaction,                             # interaction
+        #     glucose_sq                               # glucose_squared
+        # ]], dtype=float)
+
+        # # Predict probability of stroke
+        # prob = model.predict_proba(features)[0, 1]
+
+          # Compute polynomial terms
+        age_sq      = age ** 2
+        glucose_sq  = avg_glucose_level ** 2
+        interaction = age * avg_glucose_level
 
         # Encoding maps (exactly as in training)
         gender_map  = {"Male": 0, "Female": 1}
@@ -244,23 +292,26 @@ if st.button("Calculate Stroke Risk 📈"):
             "smokes": 2
         }
 
-        # Build feature vector in the same order you trained on
-        features = np.array([[
-            heart_map[heart_disease],                # heart_disease
-            htn_map[hypertension],                   # hypertension
-            married_map[ever_married],               # married_map[ever_married]
-            smoke_map[smoking_status],               # smoking_map[smoking_status]
-            work_map[work_type],                     # work_type_map[work_type]
-            gender_map[gender],                      # gender_map[gender]
-            age,                                     # age
-            avg_glucose_level,                       # avg_glucose_level
-            age_sq,                                  # age_squared
-            interaction,                             # interaction
-            glucose_sq                               # glucose_squared
+        # Build feature vector in training order
+        features = np.array([[  
+            heart_map[heart_disease],  # heart_disease
+            htn_map[hypertension],     # hypertension
+            married_map[ever_married],  # ever_married
+            smoke_map[smoking_status],  # smoking_status
+            work_map[work_type],        # work_type
+            gender_map[gender],         # gender
+            age,                        # age
+            avg_glucose_level,          # avg_glucose_level
+            age_sq,                     # age_squared
+            interaction,                # age_glucose interaction
+            glucose_sq                  # glucose_squared
         ]], dtype=float)
 
-        # Predict probability of stroke
-        prob = model.predict_proba(features)[0, 1]
+        # Scale features before prediction
+        scaled_feats = scaler.transform(features)
+
+        # Predict probability of stroke using GB model
+        prob = model.predict_proba(scaled_feats)[0, 1]
 
         # Save for Results.py
         st.session_state.user_data = {
