@@ -114,7 +114,25 @@ if st.button("Calculate Stroke Risk 📈"):
         st.session_state.prediction_prob = prob
 
         # navigate
-        st.switch_page("Results")
+         st.switch_page("pages/Results.py")
+
+# # ─────────────────────────── Footer ────────────────────────────────
+# st.markdown("""
+#   <style>
+#     .custom-footer{background:rgba(76,157,112,0.6);color:white;padding:30px 0;
+#                    border-radius:12px;margin-top:40px;text-align:center;font-size:14px;}
+#     .custom-footer a{color:white;text-decoration:none;margin:0 15px;}
+#     .custom-footer a:hover{text-decoration:underline;}
+#   </style>
+#   <div class='custom-footer'>
+#       <p>&copy; 2025 Stroke Risk Assessment Tool | All rights reserved</p>
+#       <p>
+#         <a href='/Home'>Home</a><a href='/Risk_Assessment'>Risk Assessment</a>
+#         <a href='/Results'>Results</a><a href='/Recommendations'>Recommendations</a>
+#       </p>
+#       <p style='font-size:12px;'>Developed by Victoria Mends</p>
+#   </div>
+# """, unsafe_allow_html=True)
 
 
 
