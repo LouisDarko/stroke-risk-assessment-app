@@ -47,7 +47,7 @@ st.markdown("""
         text-decoration: underline;
       }
 
-      /* Dark‐mode overrides */
+      /* Dark-mode overrides */
       @media (prefers-color-scheme: dark) {
         .header-container { background: #1f2c2f !important; }
         .custom-nav { background: #2c2c2e !important; }
@@ -65,8 +65,7 @@ st.markdown("""
   <div class="custom-nav">
     <a href='/Home'>Home</a>
     <a href='/Risk_Assessment'>Risk Assessment</a>
-    <a href='/Results'>Results</a>
-    <a href='/Recommendations'>Recommendations</a>
+    <a href='/Results'>Results</n    <a href='/Recommendations'>Recommendations</a>
   </div>
 """, unsafe_allow_html=True)
 
@@ -102,7 +101,7 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     age_sq, glu_sq = age**2, glu**2
     interaction = age * glu
 
-    X = np.array([[  
+    X = np.array([[
       {"Yes":1,"No":0}[UD["heart_disease"]],
       {"Yes":1,"No":0}[UD["hypertension"]],
       {"Yes":1,"No":0}[UD["ever_married"]],
@@ -125,20 +124,24 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     palette = ["brown","gold","steelblue","purple"]
     colors = [palette[i % len(palette)] for i in range(len(feature_names))]
 
-    # Bar chart
+    # Bar chart with percentages scale
     bar_fig = go.Figure(
         go.Bar(
             x=feature_names,
-            y=contrib*100,
+            y=contrib * 100,
             marker=dict(color=colors),
             text=[f"{v*100:.2f}%" for v in contrib],
-            textposition="auto"
+            textposition="outside"
         )
     )
     bar_fig.update_layout(
         template="plotly_white",
         title="How Each Input Contributed to Your Total Risk",
-        yaxis=dict(title="Contribution to Risk (%)"),
+        yaxis=dict(
+            title="Contribution to Risk (%)",
+            range=[0, 100],
+            ticksuffix="%"
+        ),
         xaxis=dict(tickangle=-45),
         margin=dict(t=60, b=120),
         plot_bgcolor="rgba(0,0,0,0)",
@@ -146,8 +149,8 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     )
     st.plotly_chart(bar_fig, use_container_width=True)
 
-    # Gauge chart with dynamic green-red bar
-    # compute RGB based on risk
+    # Gauge chart with green-red zones
+    # define pointer color dynamically
     r = int(255 * prob)
     g = int(255 * (1 - prob))
     bar_color = f"rgb({r},{g},0)"
@@ -155,13 +158,14 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     gauge_fig = go.Figure(
         go.Indicator(
             mode="gauge+number",
-            value=prob*100,
+            value=prob * 100,
             title={'text': "Overall Stroke Risk (%)"},
             gauge={
-                'axis': {'range': [0, 100]},
+                'axis': {'range': [0, 100], 'ticksuffix': '%'},
                 'bar': {'color': bar_color},
                 'steps': [
-                    {'range': [0, 100], 'color': 'lightgray'}
+                    {'range': [0, 50], 'color': 'green'},
+                    {'range': [50, 100], 'color': 'red'}
                 ]
             }
         )
