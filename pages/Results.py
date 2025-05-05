@@ -64,9 +64,9 @@ scaler, model = load_preprocessor_and_model()
 
 # ─────────────────── SHAP Explainer Setup ─────────────────────
 @st.cache_resource
-def get_explainer(model_obj):
+def get_explainer(_model_obj):
     background = np.zeros((1, 11))
-    return shap.KernelExplainer(model_obj.predict_proba, background)
+    return shap.KernelExplainer(_model_obj.predict_proba, background)
 
 explainer = get_explainer(model)
 
@@ -150,6 +150,7 @@ st.markdown("""
     <p style='font-size:12px; margin-top:10px;'>Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
+
 
 
 
