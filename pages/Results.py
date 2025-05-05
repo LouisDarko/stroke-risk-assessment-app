@@ -1,5 +1,6 @@
 import streamlit as st
-import os, joblib, numpy as np, shap, plotly.graph_objects as go
+import os, joblib, numpy as np, pandas as pd, shap, plotly.graph_objects as go
+from sklearn.preprocessing import StandardScaler
 
 # ───────────────────────── Page config & CSS ─────────────────────────
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
@@ -14,11 +15,9 @@ st.markdown("""
 st.title("📊 Stroke Risk Results")
 st.markdown("""
   <style>
-    .custom-nav {
-      background: #e8f5e9; padding: 15px 0; border-radius: 10px;
-      display: flex; justify-content: center; gap: 60px; margin-bottom: 30px;
-      font-size: 18px; font-weight: 600;
-    }
+    .custom-nav { background: #e8f5e9; padding: 15px 0; border-radius: 10px;
+                 display: flex; justify-content: center; gap: 60px; margin-bottom: 30px;
+                 font-size: 18px; font-weight: 600; }
     .custom-nav a { text-decoration: none; color: #4C9D70; }
     .custom-nav a:hover { color: #388e3c; text-decoration: underline; }
   </style>
@@ -30,101 +29,80 @@ st.markdown("""
   </div>
 """, unsafe_allow_html=True)
 
-# ─────────────────── Load preprocessing and model ─────────────────────
-@st.cache_resource
-def load_preprocessor():
-    import glob
+# ─────────────────── Load data and prepare scaler & GB model ─────────────────────
+@st.cache_data
+def load_preprocessor_and_model():
     base = os.path.dirname(__file__)
-    # Try full pipeline (dynamic search)
-    pipeline_files = glob.glob(os.path.join(base, "*pipeline*.pkl"))
-    for path in pipeline_files:
-        try:
-            pipeline = joblib.load(path)
-            return pipeline, True
-        except Exception:
-            continue
-    # Fallback: dynamic model and scaler
-    scaler_files = glob.glob(os.path.join(base, "*scaler*.pkl"))
-    model_files  = glob.glob(os.path.join(base, "*stacking*.pkl"))
-    if scaler_files and model_files:
-        scaler = joblib.load(scaler_files[0])
-        model  = joblib.load(model_files[0])
-        return (scaler, model), False
-    st.error("⚠️ Could not find a preprocessing pipeline or scaler + model files in the app directory.
-" \
-             + "Please upload a pipeline (*.pkl containing scaler+model) or both scaler and stacking model pickle files.")
-    st.stop()
+    data_path = os.path.join(base, "stroke_dataset.csv")
+    model_path = os.path.join(base, "best_gb_model.pkl")  # now using GB model
+    if not os.path.exists(data_path) or not os.path.exists(model_path):
+        st.error("⚠️ Missing stroke_dataset.csv or best_gb_model.pkl in app directory.")
+        st.stop()
+    # Load and preprocess dataset (same as training)
+    df = pd.read_csv(data_path)
+    df = df[df['smoking_status'] != 'Unknown']
+    df['heart_disease']  = df['heart_disease'].astype(int)
+    df['hypertension']   = df['hypertension'].astype(int)
+    df['ever_married']   = df['ever_married'].map({'Yes':1,'No':0})
+    df['smoking_status'] = df['smoking_status'].map({'never smoked':0,'formerly smoked':1,'smokes':2})
+    df['work_type']      = df['work_type'].map({'Private':0,'Self-employed':1,'Govt_job':2,'Never_worked':3})
+    df['gender']         = df['gender'].map({'Male':0,'Female':1})
+    df['age_sq']         = df['age']**2
+    df['age_glucose']    = df['age'] * df['avg_glucose_level']
+    df['glucose_sq']     = df['avg_glucose_level']**2
+    feat_cols = [
+        'heart_disease','hypertension','ever_married',
+        'smoking_status','work_type','gender',
+        'age','avg_glucose_level','age_sq','age_glucose','glucose_sq'
+    ]
+    X = df[feat_cols].values
+    scaler = StandardScaler().fit(X)
+    model  = joblib.load(model_path)
+    return scaler, model
 
-preproc, is_pipeline = load_preprocessor()
+scaler, model = load_preprocessor_and_model()
 
 # ─────────────────── SHAP Explainer Setup ─────────────────────
 @st.cache_resource
-def get_explainer(model_obj, background):
+def get_explainer(model_obj):
+    background = np.zeros((1, 11))
     return shap.KernelExplainer(model_obj.predict_proba, background)
+
+explainer = get_explainer(model)
 
 # ─────────────────────────── Main ────────────────────────────
 if "user_data" in st.session_state:
-    ud = st.session_state.user_data
-    # Raw feature vector in training order
+    ud  = st.session_state.user_data
     raw = np.array([[
-        {"Yes":1, "No":0}[ud["heart_disease"]],
-        {"Yes":1, "No":0}[ud["hypertension"]],
-        {"Yes":1, "No":0}[ud["ever_married"]],
-        {"never smoked":0, "formerly smoked":1, "smokes":2}[ud["smoking_status"]],
-        {"Private":0, "Self-employed":1, "Govt_job":2, "Never_worked":3}[ud["work_type"]],
-        {"Male":0, "Female":1}[ud["gender"]],
-        ud["age"], ud["avg_glucose_level"],
-        ud["age"]**2,
-        ud["age"] * ud["avg_glucose_level"],
-        ud["avg_glucose_level"]**2
+        {"Yes":1,"No":0}[ud["heart_disease"]],
+        {"Yes":1,"No":0}[ud["hypertension"]],
+        {"Yes":1,"No":0}[ud["ever_married"]],
+        {"never smoked":0,"formerly smoked":1,"smokes":2}[ud["smoking_status"]],
+        {"Private":0,"Self-employed":1,"Govt_job":2,"Never_worked":3}[ud["work_type"]],
+        {"Male":0,"Female":1}[ud["gender"]],
+        ud["age"], ud["avg_glucose_level"], ud["age"]**2,
+        ud["age"] * ud["avg_glucose_level"], ud["avg_glucose_level"]**2
     ]], dtype=float)
-
-    # Apply preprocessing
-    if is_pipeline:
-        pipeline = preproc
-        features = raw
-        probs = pipeline.predict_proba(features)[0]
-        prediction = pipeline.predict(features)[0]
-        classes = pipeline.classes_
-        background = raw
-    else:
-        scaler, model = preproc
-        features = scaler.transform(raw)
-        probs = model.predict_proba(features)[0]
-        prediction = model.predict(features)[0]
-        classes = model.classes_
-        background = features
-
-    # Extract positive-class probability
-    pos_idx = list(classes).index(1)
-    prob = probs[pos_idx]
-
-    # Display risk message
-    if prediction == 1:
+    features = scaler.transform(raw)
+    probs    = model.predict_proba(features)[0]
+    pred     = model.predict(features)[0]
+    pos_idx  = list(model.classes_).index(1)
+    prob     = probs[pos_idx]
+    if pred == 1:
         st.error(f"⚠️ High risk of stroke.\n\n**Probability:** {prob:.2%}")
     else:
         st.success(f"✅ Low risk of stroke.\n\n**Probability:** {prob:.2%}")
-
-    # SHAP explanation
-    explainer = get_explainer(preproc if is_pipeline else model, background)
-    sv = explainer.shap_values(features if not is_pipeline else raw, nsamples=100)
+    sv       = explainer.shap_values(features, nsamples=100)
     shap_vals = np.array(sv[1] if isinstance(sv, list) else sv).reshape(-1)
-
-    # Relative contributions (sum to 100%)
-    abs_vals = np.abs(shap_vals[:8])
-    rel_pct = abs_vals / abs_vals.sum() * 100
-    y_vals = rel_pct.tolist()
-
-    # Plot feature contributions
-    feature_names = [
-        "Heart Disease","Hypertension","Ever Married",
-        "Smoking Status","Work Type","Gender",
-        "Age","Avg Glucose"
-    ]
-    colors = ["brown","gold","steelblue","purple"]
-    fig_bar = go.Figure(go.Bar(
-        x=feature_names, y=y_vals,
-        marker=dict(color=[colors[i%4] for i in range(len(feature_names))]),
+    abs_vals  = np.abs(shap_vals[:8])
+    rel_pct   = abs_vals / abs_vals.sum() * 100
+    y_vals    = rel_pct.tolist()
+    feats     = ["Heart Disease","Hypertension","Ever Married",
+                 "Smoking Status","Work Type","Gender","Age","Avg Glucose"]
+    colors    = ["brown","gold","steelblue","purple"]
+    fig_bar   = go.Figure(go.Bar(
+        x=feats, y=y_vals,
+        marker=dict(color=[colors[i%4] for i in range(len(feats))]),
         text=[f"{v:.1f}%" for v in y_vals], textposition="auto",
         hovertemplate="<b>%{x}</b><br>Contribution: %{y:.1f}%<extra></extra>"
     ))
@@ -132,25 +110,20 @@ if "user_data" in st.session_state:
         title="Relative Feature Contributions to Stroke Risk",
         yaxis_title="Contribution (%)",
         xaxis_tickangle=-45,
-        margin=dict(t=60, b=120)
+        margin=dict(t=60,b=120)
     )
     st.plotly_chart(fig_bar, use_container_width=True)
-
-    # Gauge chart for overall risk
     fig_gauge = go.Figure(go.Indicator(
         mode="gauge+number", value=prob*100,
         title={'text':"Overall Stroke Risk (%)"},
         gauge={
             'axis':{'range':[0,100]}, 'bar':{'color':'steelblue'},
             'steps':[{'range':[0,50],'color':'lightgreen'},{'range':[50,100],'color':'lightcoral'}],
-            'threshold':{'line':{'color':'red','width':4},'value':50}
-        }
+            'threshold':{'line':{'color':'red','width':4},'value':50}}
     ))
-    fig_gauge.update_layout(margin=dict(t=50, b=0, l=0, r=0))
+    fig_gauge.update_layout(margin=dict(t=50,b=0,l=0,r=0))
     st.plotly_chart(fig_gauge, use_container_width=True)
-
-    # Navigation
-    c1, c2 = st.columns(2)
+    c1,c2 = st.columns(2)
     with c1:
         if st.button("🔙 Back to Risk Assessment"): st.switch_page("pages/Risk_Assessment.py")
     with c2:
@@ -158,7 +131,7 @@ if "user_data" in st.session_state:
 else:
     st.warning("Please complete the Risk Assessment first.")
 
-# Footer
+# footer
 st.markdown("""
   <style>
     .custom-footer { background: rgba(76,157,112,0.6); color: white; padding: 30px 0;
@@ -177,6 +150,7 @@ st.markdown("""
     <p style='font-size:12px; margin-top:10px;'>Developed by Victoria Mends</p>
   </div>
 """, unsafe_allow_html=True)
+
 
 
 
