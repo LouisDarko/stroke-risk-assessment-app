@@ -1,9 +1,21 @@
 import os
+import sys
+import __main__
 import joblib
 import streamlit as st
 import numpy as np
 
 # ── Define polynomial helper for unpickling ─────────────────────────────────
+def add_poly(X_array):
+    age         = X_array[:, 0]
+    glu         = X_array[:, 1]
+    age_sq      = age ** 2
+    interaction = age * glu
+    glu_sq      = glu ** 2
+    return np.c_[X_array, age_sq, interaction, glu_sq]
+
+# Monkey-patch into __main__ so pipeline can unpickle
+setattr(__main__, "add_poly", add_poly)
 def add_poly(X_array):
     age         = X_array[:, 0]
     glu         = X_array[:, 1]
