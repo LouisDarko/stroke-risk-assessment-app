@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="Stroke Risk Results", layout="wide")
 st.markdown("""
     <style>
-      /* Hide Streamlit default chrome */
+      /* Hide default Streamlit chrome */
       #MainMenu, footer, header {visibility: hidden;}
       [data-testid="stSidebar"], [data-testid="collapsedControl"] {display: none;}
 
@@ -49,18 +49,10 @@ st.markdown("""
 
       /* Dark‐mode overrides */
       @media (prefers-color-scheme: dark) {
-        .header-container {
-          background: #1f2c2f !important;
-        }
-        .custom-nav {
-          background: #2c2c2e !important;
-        }
-        .custom-nav a {
-          color: #ddd !important;
-        }
-        .custom-nav a:hover {
-          color: #fff !important;
-        }
+        .header-container { background: #1f2c2f !important; }
+        .custom-nav { background: #2c2c2e !important; }
+        .custom-nav a { color: #ddd !important; }
+        .custom-nav a:hover { color: #fff !important; }
       }
     </style>
 """, unsafe_allow_html=True)
@@ -110,7 +102,7 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     age_sq, glu_sq = age**2, glu**2
     interaction = age * glu
 
-    X = np.array([[
+    X = np.array([[  
       {"Yes":1,"No":0}[UD["heart_disease"]],
       {"Yes":1,"No":0}[UD["hypertension"]],
       {"Yes":1,"No":0}[UD["ever_married"]],
@@ -133,56 +125,61 @@ if "user_data" in st.session_state and "prediction_prob" in st.session_state:
     palette = ["brown","gold","steelblue","purple"]
     colors = [palette[i % len(palette)] for i in range(len(feature_names))]
 
-    # ── Bar chart with transparent bg ──────────────────────────────────────────
-    bar = go.Figure(go.Bar(
-        x=feature_names, y=contrib*100,
-        marker=dict(color=colors),
-        text=[f"{v*100:.2f}%" for v in contrib],
-        textposition="outside"
-    ))
-    bar.update_layout(
-        yaxis_title="Contribution (%)",
-        xaxis_tickangle=-45,
-        margin=dict(t=60,b=140),
+    # Bar chart
+    bar_fig = go.Figure(
+        go.Bar(
+            x=feature_names,
+            y=contrib*100,
+            marker=dict(color=colors),
+            text=[f"{v*100:.2f}%" for v in contrib],
+            textposition="auto"
+        )
+    )
+    bar_fig.update_layout(
+        template="plotly_white",
+        title="How Each Input Contributed to Your Total Risk",
+        yaxis=dict(title="Contribution to Risk (%)"),
+        xaxis=dict(tickangle=-45),
+        margin=dict(t=60, b=120),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)"
     )
-    st.plotly_chart(bar, use_container_width=True)
+    st.plotly_chart(bar_fig, use_container_width=True)
 
-    # ── Gauge chart with transparent bg ───────────────────────────────────────
-    gauge = go.Figure(go.Indicator(
-        mode="gauge+number+delta",
-        value=prob*100,
-        delta={'reference':50,'increasing':{'color':'red'},'decreasing':{'color':'green'}},
-        title={'text':"Overall Stroke Risk (%)"},
-        gauge={
-          'axis':{'range':[0,100]},
-          'bar':{'color':"purple"},
-          'steps':[
-            {'range':[0,25],'color':"steelblue"},
-            {'range':[25,50],'color':"gold"},
-            {'range':[50,75],'color':"brown"},
-            {'range':[75,100],'color':"purple"}
-          ],
-          'threshold':{
-            'line':{'color':'red','width':4},
-            'thickness':0.75,'value':prob*100
-          }
-        }
-    ))
-    gauge.update_layout(
-        margin=dict(t=40,b=0,l=0,r=0),
+    # Gauge chart with dynamic green-red bar
+    # compute RGB based on risk
+    r = int(255 * prob)
+    g = int(255 * (1 - prob))
+    bar_color = f"rgb({r},{g},0)"
+
+    gauge_fig = go.Figure(
+        go.Indicator(
+            mode="gauge+number",
+            value=prob*100,
+            title={'text': "Overall Stroke Risk (%)"},
+            gauge={
+                'axis': {'range': [0, 100]},
+                'bar': {'color': bar_color},
+                'steps': [
+                    {'range': [0, 100], 'color': 'lightgray'}
+                ]
+            }
+        )
+    )
+    gauge_fig.update_layout(
+        template="plotly_white",
+        margin=dict(t=40, b=0, l=0, r=0),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)"
     )
-    st.plotly_chart(gauge, use_container_width=True)
+    st.plotly_chart(gauge_fig, use_container_width=True)
 
-    # ── Navigation ──────────────────────────────────────────────────────────────
-    c1, c2 = st.columns(2)
-    with c1:
+    # Navigation
+    col1, col2 = st.columns(2)
+    with col1:
         if st.button("🔙 Back to Assessment"):
             st.switch_page("pages/Risk_Assessment.py")
-    with c2:
+    with col2:
         if st.button("📘 Recommendations"):
             st.switch_page("pages/Recommendations.py")
 
@@ -193,16 +190,10 @@ else:
 st.markdown("""
   <style>
     .custom-footer {
-      background-color: rgba(76,157,112,0.6);
-      color: white; padding: 20px; border-radius: 8px;
-      margin-top: 40px; text-align: center; font-size: 14px;
+      background-color: rgba(76,157,112,0.6); color: white; padding: 20px; border-radius: 8px; margin-top: 40px; text-align: center; font-size: 14px;
     }
-    .custom-footer a {
-      color: white; text-decoration: none; margin: 0 10px;
-    }
-    .custom-footer a:hover {
-      text-decoration: underline;
-    }
+    .custom-footer a { color: white; text-decoration: none; margin: 0 10px; }
+    .custom-footer a:hover { text-decoration: underline; }
   </style>
   <div class="custom-footer">
     <p>&copy; 2025 Stroke Risk Assessment Tool | Developed by Victoria Mends</p>
@@ -214,6 +205,7 @@ st.markdown("""
     </p>
   </div>
 """, unsafe_allow_html=True)
+
 
 
 
