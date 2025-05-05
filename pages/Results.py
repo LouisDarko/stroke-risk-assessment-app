@@ -29,50 +29,33 @@ st.markdown("""
   </div>
 """, unsafe_allow_html=True)
 
-# ─────────────────── Load data and prepare scaler & GB model ─────────────────────
-@st.cache_data
-def load_preprocessor_and_model():
+# ─────────────────── Load scaler & GB model ─────────────────────
+@st.cache_resource
+def load_scaler_and_model():
     base = os.path.dirname(__file__)
-    data_path = os.path.join(base, "stroke_dataset.csv")
-    model_path = os.path.join(base, "best_gb_model.pkl")  # now using GB model
-    if not os.path.exists(data_path) or not os.path.exists(model_path):
-        st.error("⚠️ Missing stroke_dataset.csv or best_gb_model.pkl in app directory.")
+    scaler_path = os.path.join(base, "scaler.pkl")
+    model_path  = os.path.join(base, "best_gb_model.pkl")
+    if not os.path.exists(scaler_path) or not os.path.exists(model_path):
+        st.error("⚠️ Missing scaler.pkl or best_gb_model.pkl in app directory.")
         st.stop()
-    # Load and preprocess dataset (same as training)
-    df = pd.read_csv(data_path)
-    df = df[df['smoking_status'] != 'Unknown']
-    df['heart_disease']  = df['heart_disease'].astype(int)
-    df['hypertension']   = df['hypertension'].astype(int)
-    df['ever_married']   = df['ever_married'].map({'Yes':1,'No':0})
-    df['smoking_status'] = df['smoking_status'].map({'never smoked':0,'formerly smoked':1,'smokes':2})
-    df['work_type']      = df['work_type'].map({'Private':0,'Self-employed':1,'Govt_job':2,'Never_worked':3})
-    df['gender']         = df['gender'].map({'Male':0,'Female':1})
-    df['age_sq']         = df['age']**2
-    df['age_glucose']    = df['age'] * df['avg_glucose_level']
-    df['glucose_sq']     = df['avg_glucose_level']**2
-    feat_cols = [
-        'heart_disease','hypertension','ever_married',
-        'smoking_status','work_type','gender',
-        'age','avg_glucose_level','age_sq','age_glucose','glucose_sq'
-    ]
-    X = df[feat_cols].values
-    scaler = StandardScaler().fit(X)
+    scaler = joblib.load(scaler_path)
     model  = joblib.load(model_path)
     return scaler, model
 
-scaler, model = load_preprocessor_and_model()
+scaler, model = load_scaler_and_model()
 
 # ─────────────────── SHAP Explainer Setup ─────────────────────
 @st.cache_resource
-def get_explainer(_model_obj):
+def get_explainer(_model):
     background = np.zeros((1, 11))
-    return shap.KernelExplainer(_model_obj.predict_proba, background)
+    return shap.KernelExplainer(_model.predict_proba, background)
 
 explainer = get_explainer(model)
 
 # ─────────────────────────── Main ────────────────────────────
 if "user_data" in st.session_state:
-    ud  = st.session_state.user_data
+    ud = st.session_state.user_data
+    # Raw features in training order
     raw = np.array([[
         {"Yes":1,"No":0}[ud["heart_disease"]],
         {"Yes":1,"No":0}[ud["hypertension"]],
@@ -80,27 +63,34 @@ if "user_data" in st.session_state:
         {"never smoked":0,"formerly smoked":1,"smokes":2}[ud["smoking_status"]],
         {"Private":0,"Self-employed":1,"Govt_job":2,"Never_worked":3}[ud["work_type"]],
         {"Male":0,"Female":1}[ud["gender"]],
-        ud["age"], ud["avg_glucose_level"], ud["age"]**2,
-        ud["age"] * ud["avg_glucose_level"], ud["avg_glucose_level"]**2
+        ud["age"], ud["avg_glucose_level"],
+        ud["age"]**2,
+        ud["age"] * ud["avg_glucose_level"],
+        ud["avg_glucose_level"]**2
     ]], dtype=float)
+    # Scale and predict
     features = scaler.transform(raw)
-    probs    = model.predict_proba(features)[0]
-    pred     = model.predict(features)[0]
-    pos_idx  = list(model.classes_).index(1)
-    prob     = probs[pos_idx]
+    probs = model.predict_proba(features)[0]
+    pred  = model.predict(features)[0]
+    pos_idx = list(model.classes_).index(1)
+    prob = probs[pos_idx]
+    # Display
     if pred == 1:
         st.error(f"⚠️ High risk of stroke.\n\n**Probability:** {prob:.2%}")
     else:
         st.success(f"✅ Low risk of stroke.\n\n**Probability:** {prob:.2%}")
-    sv       = explainer.shap_values(features, nsamples=100)
+    # SHAP contributions
+    sv = explainer.shap_values(features, nsamples=100)
     shap_vals = np.array(sv[1] if isinstance(sv, list) else sv).reshape(-1)
-    abs_vals  = np.abs(shap_vals[:8])
-    rel_pct   = abs_vals / abs_vals.sum() * 100
-    y_vals    = rel_pct.tolist()
-    feats     = ["Heart Disease","Hypertension","Ever Married",
-                 "Smoking Status","Work Type","Gender","Age","Avg Glucose"]
-    colors    = ["brown","gold","steelblue","purple"]
-    fig_bar   = go.Figure(go.Bar(
+    abs_vals = np.abs(shap_vals[:8])
+    rel_pct  = abs_vals / abs_vals.sum() * 100
+    y_vals   = rel_pct.tolist()
+    feats    = [
+        "Heart Disease","Hypertension","Ever Married",
+        "Smoking Status","Work Type","Gender","Age","Avg Glucose"
+    ]
+    colors   = ["brown","gold","steelblue","purple"]
+    fig_bar = go.Figure(go.Bar(
         x=feats, y=y_vals,
         marker=dict(color=[colors[i%4] for i in range(len(feats))]),
         text=[f"{v:.1f}%" for v in y_vals], textposition="auto",
@@ -108,30 +98,32 @@ if "user_data" in st.session_state:
     ))
     fig_bar.update_layout(
         title="Relative Feature Contributions to Stroke Risk",
-        yaxis_title="Contribution (%)",
-        xaxis_tickangle=-45,
+        yaxis_title="Contribution (%)", xaxis_tickangle=-45,
         margin=dict(t=60,b=120)
     )
     st.plotly_chart(fig_bar, use_container_width=True)
+    # Gauge chart
     fig_gauge = go.Figure(go.Indicator(
         mode="gauge+number", value=prob*100,
         title={'text':"Overall Stroke Risk (%)"},
-        gauge={
-            'axis':{'range':[0,100]}, 'bar':{'color':'steelblue'},
-            'steps':[{'range':[0,50],'color':'lightgreen'},{'range':[50,100],'color':'lightcoral'}],
-            'threshold':{'line':{'color':'red','width':4},'value':50}}
+        gauge={'axis':{'range':[0,100]}, 'bar':{'color':'steelblue'},
+               'steps':[{'range':[0,50],'color':'lightgreen'},{'range':[50,100],'color':'lightcoral'}],
+               'threshold':{'line':{'color':'red','width':4},'value':50}}
     ))
     fig_gauge.update_layout(margin=dict(t=50,b=0,l=0,r=0))
     st.plotly_chart(fig_gauge, use_container_width=True)
-    c1,c2 = st.columns(2)
+    # Navigation
+    c1, c2 = st.columns(2)
     with c1:
-        if st.button("🔙 Back to Risk Assessment"): st.switch_page("pages/Risk_Assessment.py")
+        if st.button("🔙 Back to Risk Assessment"): 
+            st.switch_page("pages/Risk_Assessment.py")
     with c2:
-        if st.button("📘 Go to Recommendations"): st.switch_page("pages/Recommendations.py")
+        if st.button("📘 Go to Recommendations"): 
+            st.switch_page("pages/Recommendations.py")
 else:
     st.warning("Please complete the Risk Assessment first.")
 
-# footer
+# Footer
 st.markdown("""
   <style>
     .custom-footer { background: rgba(76,157,112,0.6); color: white; padding: 30px 0;
