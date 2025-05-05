@@ -11,10 +11,7 @@ st.markdown("""
       #MainMenu, footer, header {visibility: hidden;}
       [data-testid="stSidebar"], [data-testid="collapsedControl"] {display: none;}
     </style>
-<style>
-  #MainMenu, footer, header {visibility: hidden;}
-  [data-testid="stSidebar"], [data-testid="collapsedControl"] {display: none;}
-</style>
+
 """, unsafe_allow_html=True)
 
 # ── Title & Navbar ─────────────────────────────────────────────────────────────
